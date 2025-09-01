@@ -1,0 +1,14 @@
+# Optional: only needed if your Plesk domain document root is not set to the public/ directory
+# This redirects all traffic to public/
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # If the request is for an existing file or directory at the project root, serve it
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Otherwise, route everything to public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
