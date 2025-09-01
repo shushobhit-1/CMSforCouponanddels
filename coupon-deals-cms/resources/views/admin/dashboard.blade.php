@@ -16,7 +16,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="fw-semibold text-muted">Users</div>
-                            <div class="fs-4">—</div>
+                            <div class="fs-4">{{ number_format($stats['users'] ?? 0) }}</div>
                         </div>
                         <i class="fa-solid fa-users fs-3 text-primary"></i>
                     </div>
@@ -29,7 +29,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="fw-semibold text-muted">Coupons</div>
-                            <div class="fs-4">—</div>
+                            <div class="fs-4">{{ number_format($stats['coupons'] ?? 0) }}</div>
                         </div>
                         <i class="fa-solid fa-ticket fs-3 text-success"></i>
                     </div>
@@ -42,7 +42,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="fw-semibold text-muted">Deals</div>
-                            <div class="fs-4">—</div>
+                            <div class="fs-4">{{ number_format($stats['deals'] ?? 0) }}</div>
                         </div>
                         <i class="fa-solid fa-tags fs-3 text-warning"></i>
                     </div>
@@ -55,7 +55,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="fw-semibold text-muted">Products</div>
-                            <div class="fs-4">—</div>
+                            <div class="fs-4">{{ number_format($stats['products'] ?? 0) }}</div>
                         </div>
                         <i class="fa-solid fa-box fs-3 text-danger"></i>
                     </div>
