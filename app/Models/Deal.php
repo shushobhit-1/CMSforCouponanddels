@@ -19,41 +19,35 @@ class Deal extends Model
         'short_description',
         'store_id',
         'category_id',
-        'deal_type', // percentage, fixed, free_shipping, etc.
+        'deal_type', // percentage, fixed, free_shipping, buy_one_get_one
+        'discount_value',
         'original_price',
         'deal_price',
-        'discount_percentage',
-        'discount_amount',
         'currency',
-        'affiliate_link',
-        'tracking_id',
         'start_date',
         'end_date',
         'is_featured',
         'is_popular',
         'is_active',
-        'is_verified',
-        'click_count',
-        'conversion_count',
-        'revenue',
+        'affiliate_link',
+        'tracking_id',
         'commission_rate',
-        'commission_amount',
+        'min_purchase',
+        'max_discount',
+        'usage_limit',
+        'used_count',
         'meta_title',
         'meta_description',
         'meta_keywords',
         'og_image',
         'twitter_image',
         'created_by',
-        'status',
-        'sort_order',
-        'deal_code',
-        'terms_conditions',
-        'restrictions',
-        'minimum_purchase',
-        'maximum_discount',
-        'usage_limit',
-        'used_count',
-        'deal_popup_settings',
+        'status', // active, inactive, expired, scheduled
+        'priority',
+        'tags',
+        'conditions',
+        'exclusions',
+        'popup_settings', // JSON for popup customization
         'button_text',
         'button_color',
         'button_hover_effect'
@@ -65,17 +59,22 @@ class Deal extends Model
         'is_featured' => 'boolean',
         'is_popular' => 'boolean',
         'is_active' => 'boolean',
-        'is_verified' => 'boolean',
-        'deal_popup_settings' => 'array',
         'original_price' => 'decimal:2',
         'deal_price' => 'decimal:2',
-        'discount_percentage' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
+        'discount_value' => 'decimal:2',
         'commission_rate' => 'decimal:2',
-        'commission_amount' => 'decimal:2',
-        'revenue' => 'decimal:2',
-        'minimum_purchase' => 'decimal:2',
-        'maximum_discount' => 'decimal:2'
+        'min_purchase' => 'decimal:2',
+        'max_discount' => 'decimal:2',
+        'usage_limit' => 'integer',
+        'used_count' => 'integer',
+        'priority' => 'integer',
+        'tags' => 'array',
+        'conditions' => 'array',
+        'exclusions' => 'array',
+        'popup_settings' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime'
     ];
 
     protected $dates = [
@@ -104,7 +103,7 @@ class Deal extends Model
 
     public function favorites()
     {
-        return $this->morphMany(Favorite::class, 'favorable');
+        return $this->morphMany(Favorite::class, 'favoritable');
     }
 
     public function clicks()
@@ -126,6 +125,7 @@ class Deal extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
+                    ->where('status', 'active')
                     ->where('start_date', '<=', now())
                     ->where('end_date', '>=', now());
     }
@@ -166,97 +166,74 @@ class Deal extends Model
         return $query->whereBetween('deal_price', [$min, $max]);
     }
 
-    public function scopeByDiscount($query, $minDiscount)
-    {
-        return $query->where('discount_percentage', '>=', $minDiscount);
-    }
-
     public function scopeSearch($query, $search)
     {
         return $query->where(function($q) use ($search) {
             $q->where('title', 'like', "%{$search}%")
               ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('deal_code', 'like', "%{$search}%");
+              ->orWhere('tags', 'like', "%{$search}%");
         });
     }
 
     // Accessors
-    public function getExpirationStatusAttribute()
-    {
-        if ($this->end_date < now()) {
-            return 'expired';
-        } elseif ($this->end_date < now()->addDays(7)) {
-            return 'expiring_soon';
-        } else {
-            return 'active';
-        }
-    }
-
-    public function getDiscountTextAttribute()
-    {
-        if ($this->deal_type === 'percentage') {
-            return "Save {$this->discount_percentage}%";
-        } elseif ($this->deal_type === 'fixed') {
-            return "Save {$this->currency} {$this->discount_amount}";
-        } elseif ($this->deal_type === 'free_shipping') {
-            return 'Free Shipping';
-        } else {
-            return 'Special Deal';
-        }
-    }
-
-    public function getRemainingDaysAttribute()
-    {
-        if ($this->end_date < now()) {
-            return 0;
-        }
-        return now()->diffInDays($this->end_date, false);
-    }
-
-    public function getUsagePercentageAttribute()
-    {
-        if ($this->usage_limit === 0) {
-            return 0;
-        }
-        return round(($this->used_count / $this->usage_limit) * 100, 2);
-    }
-
-    public function getStoreNameAttribute()
-    {
-        return $this->store->name ?? 'Unknown Store';
-    }
-
-    public function getCategoryNameAttribute()
-    {
-        return $this->category->name ?? 'Uncategorized';
-    }
-
-    public function getImageUrlAttribute()
-    {
-        return $this->getFirstMediaUrl('deal_images', 'medium') ?: asset('images/default-deal.jpg');
-    }
-
-    public function getThumbnailUrlAttribute()
-    {
-        return $this->getFirstMediaUrl('deal_images', 'thumbnail') ?: asset('images/default-deal-thumb.jpg');
-    }
-
-    public function getIsExpiredAttribute()
+    public function getExpiredAttribute()
     {
         return $this->end_date < now();
     }
 
-    public function getIsActiveAttribute()
+    public function getExpiresInDaysAttribute()
     {
-        return $this->is_active && !$this->is_expired;
+        if ($this->expired) return 0;
+        return now()->diffInDays($this->end_date, false);
+    }
+
+    public function getDiscountPercentageAttribute()
+    {
+        if ($this->original_price <= 0) return 0;
+        return round((($this->original_price - $this->deal_price) / $this->original_price) * 100);
+    }
+
+    public function getSavingsAmountAttribute()
+    {
+        return $this->original_price - $this->deal_price;
+    }
+
+    public function getStoreNameAttribute()
+    {
+        return $this->store ? $this->store->name : 'Unknown Store';
+    }
+
+    public function getCategoryNameAttribute()
+    {
+        return $this->category ? $this->category->name : 'Uncategorized';
+    }
+
+    public function getImageUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('deals', 'medium') ?: asset('images/default-deal.jpg');
+    }
+
+    public function getThumbnailUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('deals', 'thumbnail') ?: asset('images/default-deal-thumb.jpg');
+    }
+
+    public function getStatusTextAttribute()
+    {
+        if ($this->expired) return 'Expired';
+        if ($this->start_date > now()) return 'Upcoming';
+        return 'Active';
+    }
+
+    public function getButtonTextAttribute($value)
+    {
+        return $value ?: 'Get Deal';
     }
 
     // Methods
     public function trackClick($userId = null, $ip = null, $userAgent = null)
     {
-        $this->increment('click_count');
-        
-        $this->clicks()->create([
+        return $this->clicks()->create([
             'user_id' => $userId,
             'ip_address' => $ip,
             'user_agent' => $userAgent,
@@ -266,17 +243,7 @@ class Deal extends Model
 
     public function trackConversion($userId = null, $orderId = null, $amount = null, $commission = null)
     {
-        $this->increment('conversion_count');
-        
-        if ($amount) {
-            $this->increment('revenue', $amount);
-        }
-        
-        if ($commission) {
-            $this->increment('commission_amount', $commission);
-        }
-        
-        $this->conversions()->create([
+        return $this->conversions()->create([
             'user_id' => $userId,
             'order_id' => $orderId,
             'amount' => $amount,
@@ -285,15 +252,17 @@ class Deal extends Model
         ]);
     }
 
-    public function updatePopularity()
+    public function incrementUsage()
     {
-        $score = ($this->click_count * 0.3) + ($this->conversion_count * 0.7);
-        
-        if ($score > 100) {
-            $this->update(['is_popular' => true]);
-        } else {
-            $this->update(['is_popular' => false]);
-        }
+        $this->increment('used_count');
+    }
+
+    public function isAvailable()
+    {
+        return $this->is_active && 
+               $this->status === 'active' && 
+               !$this->expired && 
+               ($this->usage_limit === null || $this->used_count < $this->usage_limit);
     }
 
     public function getSlugOptions(): SlugOptions
@@ -301,40 +270,42 @@ class Deal extends Model
         return SlugOptions::create()
             ->generateSlugsFrom('title')
             ->saveSlugsTo('slug')
-            ->slugsShouldBeNoLongerThan(50);
+            ->doNotGenerateSlugsOnUpdate();
     }
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('deal_images')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp'])
-            ->withResponsiveImages();
+        $this->addMediaCollection('deals')
+            ->singleFile()
+            ->useDisk('public');
+
+        $this->addMediaCollection('banners')
+            ->useDisk('public');
     }
 
-    public function getSeoData()
+    // SEO Methods
+    public function getSeoTitle()
     {
-        return [
-            'title' => $this->meta_title ?: $this->title,
-            'description' => $this->meta_description ?: $this->short_description,
-            'keywords' => $this->meta_keywords,
-            'og_image' => $this->og_image ?: $this->image_url,
-            'twitter_image' => $this->twitter_image ?: $this->image_url,
-            'canonical_url' => route('deals.show', $this->slug)
-        ];
+        return $this->meta_title ?: $this->title;
     }
 
-    public function getButtonText()
+    public function getSeoDescription()
     {
-        return $this->button_text ?: 'Get Deal';
+        return $this->meta_description ?: Str::limit($this->description, 160);
     }
 
-    public function getButtonColor()
+    public function getSeoKeywords()
     {
-        return $this->button_color ?: '#007bff';
+        return $this->meta_keywords ?: implode(', ', $this->tags ?? []);
     }
 
-    public function getButtonHoverEffect()
+    public function getOgImage()
     {
-        return $this->button_hover_effect ?: 'scale';
+        return $this->og_image ?: $this->image_url;
+    }
+
+    public function getTwitterImage()
+    {
+        return $this->twitter_image ?: $this->image_url;
     }
 }
