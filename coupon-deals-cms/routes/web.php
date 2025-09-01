@@ -10,6 +10,7 @@ use App\Http\Controllers\ProductPublicController;
 use App\Http\Controllers\StorePublicController;
 use App\Http\Controllers\CategoryPublicController;
 use App\Http\Controllers\ApiController;
+use App\Http\Controllers\Admin\SliderController as AdminSliderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,6 +62,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
     ->name('admin.')
     ->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::resource('sliders', AdminSliderController::class);
     });
 
 require __DIR__.'/auth.php';
