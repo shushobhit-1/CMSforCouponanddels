@@ -4,6 +4,12 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\CouponPublicController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\DealPublicController;
+use App\Http\Controllers\ProductPublicController;
+use App\Http\Controllers\StorePublicController;
+use App\Http\Controllers\CategoryPublicController;
+use App\Http\Controllers\ApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,13 +22,31 @@ use App\Http\Controllers\CouponPublicController;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Home page
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// Public coupons
+// Public Routes
 Route::get('/coupons', [CouponPublicController::class, 'index'])->name('coupons.index');
 Route::get('/coupons/{coupon:slug}', [CouponPublicController::class, 'show'])->name('coupons.show');
+
+Route::get('/deals', [DealPublicController::class, 'index'])->name('deals.index');
+Route::get('/deals/{deal:slug}', [DealPublicController::class, 'show'])->name('deals.show');
+
+Route::get('/products', [ProductPublicController::class, 'index'])->name('products.index');
+Route::get('/products/{product:slug}', [ProductPublicController::class, 'show'])->name('products.show');
+
+Route::get('/stores', [StorePublicController::class, 'index'])->name('stores.index');
+Route::get('/stores/{store:slug}', [StorePublicController::class, 'show'])->name('stores.show');
+
+Route::get('/categories', [CategoryPublicController::class, 'index'])->name('categories.index');
+Route::get('/categories/{category:slug}', [CategoryPublicController::class, 'show'])->name('categories.show');
+
+// API Routes for tracking
+Route::prefix('api')->group(function () {
+    Route::post('/track-coupon-click', [ApiController::class, 'trackCouponClick']);
+    Route::post('/track-affiliate-click', [ApiController::class, 'trackAffiliateClick']);
+    Route::post('/favorites/toggle', [ApiController::class, 'toggleFavorite'])->middleware('auth');
+});
 
 // Auth protected dashboard (user)
 Route::middleware(['auth', 'verified'])->group(function () {

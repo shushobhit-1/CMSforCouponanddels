@@ -1,66 +1,409 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🎯 Coupon Deals & Affiliate Product CMS
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A comprehensive Laravel-based Content Management System designed specifically for managing coupons, deals, and affiliate products with a modern Bootstrap UI and advanced features.
 
-## About Laravel
+![Laravel](https://img.shields.io/badge/Laravel-v10.0-red.svg)
+![PHP](https://img.shields.io/badge/PHP-v8.1+-blue.svg)
+![Bootstrap](https://img.shields.io/badge/Bootstrap-v5.3-purple.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## ✨ Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 🚀 Core Features
+- **Modern UI Design** - Clean, responsive Bootstrap 5 interface
+- **Coupon Management** - Complete coupon lifecycle management
+- **Deal Management** - Hot deals with "Get Deal" buttons
+- **Product Management** - Product catalog with "Check Product" buttons
+- **Store Management** - Store profiles with logos and information
+- **Category System** - Hierarchical categorization
+- **User Management** - Separate admin and user dashboards
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 🎪 Coupon Popup Features
+- **Interactive Popup** - Animated SweetAlert2 modals
+- **Circular Share Icons** - Beautiful social sharing buttons
+- **Code Revelation** - Click to reveal coupon codes
+- **Copy to Clipboard** - One-click code copying
+- **Social Sharing** - Facebook, Twitter, WhatsApp, Telegram
+- **Affiliate Tracking** - Complete click and conversion tracking
 
-## Learning Laravel
+### 🔗 Affiliate Network Integration
+- **vCommission** - Full API integration
+- **CueLinks** - Link monetization
+- **OptimiseMedia** - Performance marketing
+- **INR Deals** - Indian market focus
+- **Amazon Associates** - Product API integration
+- **Flipkart Affiliate** - E-commerce integration
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 📊 Admin Dashboard
+- **Analytics Dashboard** - Complete statistics and charts
+- **Header/Footer Editor** - Visual content management
+- **Slider Management** - Homepage slider controls
+- **Theme Customization** - Colors, fonts, and styling
+- **Menu Customization** - Dynamic navigation menus
+- **API Key Management** - Secure credential storage
+- **SEO Management** - Meta tags and optimization
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 🔔 Advanced Features
+- **OneSignal Integration** - Push notifications
+- **Favorite Stores** - User preference system
+- **PWA Support** - Progressive Web App capabilities
+- **Google Site Kit** - SEO and analytics
+- **AdSense Integration** - Revenue optimization
+- **Page Speed Optimization** - Performance focused
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 📱 User Experience
+- **Mega Menu** - Comprehensive navigation
+- **Hover Effects** - Interactive UI elements
+- **Responsive Design** - Mobile-first approach
+- **Search Functionality** - Advanced filtering
+- **Pagination** - Efficient content browsing
 
-## Laravel Sponsors
+## 🛠️ Technology Stack
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Backend
+- **Laravel 10.0** - PHP Framework
+- **PHP 8.1+** - Server-side language
+- **SQLite/MySQL** - Database options
+- **Spatie Packages** - Permissions, Media, Slugs
+- **Guzzle HTTP** - API integrations
 
-### Premium Partners
+### Frontend
+- **Bootstrap 5.3** - CSS Framework
+- **Font Awesome 6.4** - Icons
+- **jQuery 3.7** - JavaScript library
+- **SweetAlert2** - Beautiful alerts
+- **Animate.css** - CSS animations
+- **AOS** - Animate on scroll
+- **Chart.js** - Data visualization
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+### Additional Libraries
+- **Swiper** - Touch sliders
+- **LazySizes** - Image lazy loading
+- **Particles.js** - Background effects
+- **Typed.js** - Typing animations
+- **CountUp.js** - Number animations
+- **DataTables** - Advanced tables
+- **Select2** - Enhanced select boxes
+- **Flatpickr** - Date picker
 
-## Contributing
+## 📋 Installation
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Prerequisites
+- PHP 8.1 or higher
+- Composer
+- Node.js & npm
+- Web server (Apache/Nginx)
 
-## Code of Conduct
+### Step 1: Clone Repository
+```bash
+git clone https://github.com/your-repo/coupon-deals-cms.git
+cd coupon-deals-cms
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Step 2: Install Dependencies
+```bash
+# Install PHP dependencies
+composer install
 
-## Security Vulnerabilities
+# Install Node.js dependencies
+npm install
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Step 3: Environment Setup
+```bash
+# Copy environment file
+cp .env.example .env
 
-## License
+# Generate application key
+php artisan key:generate
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# Configure database in .env file
+DB_CONNECTION=sqlite
+DB_DATABASE=database/database.sqlite
+```
+
+### Step 4: Database Setup
+```bash
+# Create SQLite database file
+touch database/database.sqlite
+
+# Run migrations
+php artisan migrate
+
+# Seed database with sample data
+php artisan db:seed
+```
+
+### Step 5: Build Assets
+```bash
+# Compile frontend assets
+npm run build
+
+# Or for development
+npm run dev
+```
+
+### Step 6: Storage Setup
+```bash
+# Create symbolic link for storage
+php artisan storage:link
+
+# Set permissions
+chmod -R 775 storage bootstrap/cache
+```
+
+## 🚀 Quick Start
+
+### Default Admin Login
+- **Email**: admin@example.com
+- **Password**: password
+
+### Access Points
+- **Public Site**: http://localhost:8000
+- **Admin Panel**: http://localhost:8000/admin
+- **User Dashboard**: http://localhost:8000/dashboard
+
+### Development Server
+```bash
+# Start Laravel development server
+php artisan serve
+
+# Start Vite development server (separate terminal)
+npm run dev
+```
+
+## 📁 Project Structure
+
+```
+coupon-deals-cms/
+├── app/
+│   ├── Http/Controllers/
+│   │   ├── Admin/          # Admin controllers
+│   │   ├── Auth/           # Authentication
+│   │   └── Public/         # Public controllers
+│   ├── Models/             # Eloquent models
+│   ├── Services/           # Business logic
+│   └── Helpers/            # Helper functions
+├── database/
+│   ├── migrations/         # Database migrations
+│   ├── seeders/           # Database seeders
+│   └── factories/         # Model factories
+├── resources/
+│   ├── views/
+│   │   ├── admin/         # Admin templates
+│   │   ├── public/        # Public templates
+│   │   └── layouts/       # Layout templates
+│   ├── js/                # JavaScript files
+│   └── css/               # Stylesheets
+├── public/
+│   ├── images/            # Static images
+│   ├── css/               # Compiled CSS
+│   ├── js/                # Compiled JS
+│   ├── manifest.json      # PWA manifest
+│   └── sw.js              # Service worker
+└── routes/
+    ├── web.php            # Web routes
+    ├── api.php            # API routes
+    └── auth.php           # Authentication routes
+```
+
+## ⚙️ Configuration
+
+### Affiliate Networks Setup
+
+1. **Access Admin Panel** → Affiliate Networks
+2. **Add Network** with required credentials:
+   - **vCommission**: API Key, Publisher ID
+   - **CueLinks**: API Key, Publisher ID
+   - **Amazon**: Access Key, Secret Key, Tracking ID
+   - **Flipkart**: API Key, Tracking ID
+
+### OneSignal Setup
+```env
+ONESIGNAL_APP_ID=your_app_id
+ONESIGNAL_API_KEY=your_api_key
+```
+
+### Google Services
+```env
+GOOGLE_SITE_KIT_ID=your_site_kit_id
+GOOGLE_ANALYTICS_ID=your_analytics_id
+GOOGLE_ADSENSE_ID=your_adsense_id
+```
+
+## 🎨 Customization
+
+### Theme Customization
+- Navigate to **Admin** → **Appearance** → **Theme**
+- Customize colors, fonts, and layouts
+- Preview changes in real-time
+
+### Menu Management
+- **Admin** → **Appearance** → **Menus**
+- Drag and drop menu builder
+- Support for mega menus
+
+### Header/Footer Editor
+- **Admin** → **Appearance** → **Editor**
+- Visual WYSIWYG editor
+- Custom HTML/CSS support
+
+## 📈 SEO Features
+
+### Built-in SEO
+- **Meta Tags** - Title, description, keywords
+- **Open Graph** - Social media optimization
+- **Twitter Cards** - Twitter sharing
+- **Schema Markup** - Structured data
+- **XML Sitemaps** - Search engine indexing
+
+### Google Integration
+- **Google Site Kit** - Comprehensive analytics
+- **Search Console** - Search performance
+- **Analytics** - User behavior tracking
+- **AdSense** - Revenue optimization
+
+## 🔧 API Documentation
+
+### Tracking APIs
+```javascript
+// Track coupon clicks
+POST /api/track-coupon-click
+{
+    "coupon_code": "SAVE20",
+    "user_agent": "...",
+    "referrer": "..."
+}
+
+// Track affiliate clicks
+POST /api/track-affiliate-click
+{
+    "affiliate_url": "https://...",
+    "user_agent": "...",
+    "referrer": "..."
+}
+
+// Toggle favorites
+POST /api/favorites/toggle
+{
+    "type": "coupon|deal|product|store",
+    "id": 123
+}
+```
+
+## 🛡️ Security Features
+
+### Authentication
+- **Laravel Breeze** - Authentication scaffolding
+- **Email Verification** - Account security
+- **Password Reset** - Secure recovery
+- **Role-based Access** - Spatie Permissions
+
+### Data Protection
+- **CSRF Protection** - Cross-site request forgery
+- **SQL Injection Protection** - Eloquent ORM
+- **XSS Protection** - Output escaping
+- **Rate Limiting** - API protection
+
+## 📊 Performance
+
+### Optimization Features
+- **Image Lazy Loading** - Faster page loads
+- **Asset Minification** - Reduced file sizes
+- **Caching** - Redis/Memcached support
+- **CDN Ready** - Static asset delivery
+- **Database Indexing** - Query optimization
+
+### Monitoring
+- **Query Debugging** - Laravel Debugbar
+- **Performance Metrics** - Built-in analytics
+- **Error Logging** - Comprehensive logging
+- **Health Checks** - System monitoring
+
+## 🧪 Testing
+
+### Run Tests
+```bash
+# Run PHP tests
+php artisan test
+
+# Run specific test suite
+php artisan test --testsuite=Feature
+
+# Generate coverage report
+php artisan test --coverage
+```
+
+## 🚀 Deployment
+
+### Production Setup
+```bash
+# Optimize for production
+composer install --no-dev --optimize-autoloader
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Build production assets
+npm run build
+```
+
+### Environment Variables
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://yourdomain.com
+
+# Database
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=your_database
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+
+# Mail
+MAIL_MAILER=smtp
+MAIL_HOST=your_smtp_host
+MAIL_PORT=587
+MAIL_USERNAME=your_email
+MAIL_PASSWORD=your_password
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Laravel Team** - Amazing PHP framework
+- **Bootstrap Team** - Responsive CSS framework
+- **Spatie** - Excellent Laravel packages
+- **Font Awesome** - Beautiful icons
+- **All Contributors** - Community support
+
+## 📞 Support
+
+- **Documentation**: [Wiki](https://github.com/your-repo/coupon-deals-cms/wiki)
+- **Issues**: [GitHub Issues](https://github.com/your-repo/coupon-deals-cms/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-repo/coupon-deals-cms/discussions)
+- **Email**: support@yourdomain.com
+
+---
+
+<div align="center">
+    <p>Made with ❤️ for better deals and savings</p>
+    <p>
+        <a href="https://github.com/your-repo/coupon-deals-cms">⭐ Star this repo</a> •
+        <a href="https://github.com/your-repo/coupon-deals-cms/issues">🐛 Report Bug</a> •
+        <a href="https://github.com/your-repo/coupon-deals-cms/issues">💡 Request Feature</a>
+    </p>
+</div>
