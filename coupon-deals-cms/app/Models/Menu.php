@@ -8,4 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Menu extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'name', 'location', 'items', 'is_active',
+    ];
+
+    protected $casts = [
+        'items' => 'array',
+        'is_active' => 'boolean',
+    ];
 }
