@@ -24,7 +24,8 @@ class SettingController extends Controller
             'social_facebook',
             'social_twitter',
             'social_instagram',
-            'social_youtube'
+            'social_youtube',
+            'admin_prefix'
         ])->pluck('value', 'key');
 
         return view('admin.settings.general', compact('settings'));
@@ -47,7 +48,10 @@ class SettingController extends Controller
             'social_twitter' => 'nullable|url',
             'social_instagram' => 'nullable|url',
             'social_youtube' => 'nullable|url',
+            'admin_prefix' => 'nullable|string|max:50'
         ]);
+
+        $adminPrefixChanged = false;
 
         foreach ($validated as $key => $value) {
             if ($key === 'site_logo' || $key === 'site_favicon') {
@@ -69,9 +73,23 @@ class SettingController extends Controller
                     'type' => ($key === 'site_logo' || $key === 'site_favicon') ? 'file' : 'string'
                 ]
             );
+
+            if ($key === 'admin_prefix') {
+                $adminPrefixChanged = true;
+            }
         }
 
-        return back()->with('success', 'General settings updated successfully.');
+        if ($adminPrefixChanged) {
+            try {
+                // Clear route cache so new prefix takes effect
+                \Artisan::call('route:clear');
+                \Artisan::call('config:clear');
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
+        return back()->with('success', 'General settings updated successfully.' . ($adminPrefixChanged ? ' Admin URL updated; please use the new URL to access the dashboard.' : ''));
     }
 
     /**

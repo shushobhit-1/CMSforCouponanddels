@@ -59,6 +59,9 @@ return [
 
     'asset_url' => env('ASSET_URL'),
 
+    // Custom: Admin URL prefix
+    'admin_prefix' => env('ADMIN_PREFIX', 'admi'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

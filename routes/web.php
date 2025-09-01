@@ -69,8 +69,20 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
+// Admin prefix (configurable, default 'admi')
+$adminPrefix = config('app.admin_prefix', 'admi');
+try {
+    $configuredPrefix = \App\Models\Setting::where('key', 'admin_prefix')->value('value');
+    if (!empty($configuredPrefix)) {
+        // ensure no leading slash for Route::prefix
+        $adminPrefix = ltrim($configuredPrefix, '/');
+    }
+} catch (\Throwable $e) {
+    // ignore if settings table not ready
+}
+
 // Admin Routes (require admin authentication)
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:admin'])->prefix($adminPrefix)->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     // Coupons Management
