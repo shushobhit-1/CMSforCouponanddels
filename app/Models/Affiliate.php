@@ -13,62 +13,92 @@ class Affiliate extends Model
     protected $fillable = [
         'name',
         'slug',
-        'description',
         'network_type', // vcommission, cuelinks, optimisemedia, inrdeals, amazon, flipkart, custom
+        'description',
+        'logo',
+        'website_url',
+        'api_endpoint',
         'api_key',
         'api_secret',
         'access_token',
         'refresh_token',
         'token_expires_at',
-        'base_url',
-        'api_endpoint',
-        'is_active',
-        'is_verified',
+        'tracking_id',
+        'affiliate_id',
+        'username',
+        'password',
         'commission_rate',
         'commission_type', // percentage, fixed
-        'payout_threshold',
+        'minimum_payout',
         'payout_schedule', // weekly, monthly, quarterly
+        'status', // active, inactive, pending, suspended
+        'verification_status', // pending, verified, rejected
+        'verification_date',
+        'verification_notes',
+        'contact_person',
         'contact_email',
         'contact_phone',
-        'website_url',
-        'logo',
-        'banner',
-        'terms_conditions',
-        'privacy_policy',
-        'status', // active, inactive, pending, suspended
-        'last_sync_at',
-        'sync_frequency', // hourly, daily, weekly
-        'auto_sync',
+        'support_email',
+        'support_phone',
+        'support_url',
+        'terms_url',
+        'privacy_url',
+        'faq_url',
+        'api_documentation_url',
+        'features', // JSON array of features
+        'restrictions', // JSON array of restrictions
+        'categories', // JSON array of supported categories
+        'countries', // JSON array of supported countries
+        'currencies', // JSON array of supported currencies
+        'languages', // JSON array of supported languages
+        'payment_methods', // JSON array of payment methods
+        'reporting_frequency', // daily, weekly, monthly
+        'last_report_date',
+        'last_sync_date',
+        'sync_status', // success, failed, pending
+        'sync_notes',
+        'error_count',
+        'last_error',
+        'last_error_date',
+        'performance_rating',
+        'trust_score',
         'created_by',
-        'settings', // JSON for network-specific settings
-        'webhook_url',
-        'webhook_secret',
-        'tracking_parameters', // JSON for tracking parameters
-        'performance_metrics' // JSON for performance data
+        'updated_by',
+        'activated_at',
+        'deactivated_at',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'is_verified' => 'boolean',
-        'commission_rate' => 'decimal:2',
-        'payout_threshold' => 'decimal:2',
         'token_expires_at' => 'datetime',
-        'last_sync_at' => 'datetime',
-        'auto_sync' => 'boolean',
-        'settings' => 'array',
-        'tracking_parameters' => 'array',
-        'performance_metrics' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'verification_date' => 'datetime',
+        'last_report_date' => 'datetime',
+        'last_sync_date' => 'datetime',
+        'last_error_date' => 'datetime',
+        'activated_at' => 'datetime',
+        'deactivated_at' => 'datetime',
+        'commission_rate' => 'decimal:2',
+        'minimum_payout' => 'decimal:2',
+        'performance_rating' => 'decimal:1',
+        'trust_score' => 'integer',
+        'error_count' => 'integer',
+        'features' => 'array',
+        'restrictions' => 'array',
+        'categories' => 'array',
+        'countries' => 'array',
+        'currencies' => 'array',
+        'languages' => 'array',
+        'payment_methods' => 'array',
     ];
 
     protected $dates = [
         'token_expires_at',
-        'last_sync_at',
-        'created_at',
-        'updated_at',
-        'deleted_at'
+        'verification_date',
+        'last_report_date',
+        'last_sync_date',
+        'last_error_date',
+        'activated_at',
+        'deactivated_at',
+        'deleted_at',
     ];
 
     protected $hidden = [
@@ -76,13 +106,18 @@ class Affiliate extends Model
         'api_secret',
         'access_token',
         'refresh_token',
-        'webhook_secret'
+        'password',
     ];
 
     // Relationships
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     public function stores()
@@ -105,31 +140,25 @@ class Affiliate extends Model
         return $this->hasMany(Product::class);
     }
 
-    public function clicks()
+    public function reports()
     {
-        return $this->hasMany(AffiliateClick::class);
+        return $this->hasMany(AffiliateReport::class);
     }
 
-    public function conversions()
+    public function transactions()
     {
-        return $this->hasMany(AffiliateConversion::class);
-    }
-
-    public function payouts()
-    {
-        return $this->hasMany(AffiliatePayout::class);
+        return $this->hasMany(AffiliateTransaction::class);
     }
 
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
-                    ->where('status', 'active');
+        return $query->where('status', 'active');
     }
 
     public function scopeVerified($query)
     {
-        return $query->where('is_verified', true);
+        return $query->where('verification_status', 'verified');
     }
 
     public function scopeByNetworkType($query, $type)
@@ -142,24 +171,105 @@ class Affiliate extends Model
         return $query->where('status', $status);
     }
 
-    public function scopeAutoSync($query)
+    public function scopeByVerificationStatus($query, $status)
     {
-        return $query->where('auto_sync', true);
+        return $query->where('verification_status', $status);
+    }
+
+    public function scopeByCategory($query, $category)
+    {
+        return $query->whereJsonContains('categories', $category);
+    }
+
+    public function scopeByCountry($query, $country)
+    {
+        return $query->whereJsonContains('countries', $country);
+    }
+
+    public function scopeByCurrency($query, $currency)
+    {
+        return $query->whereJsonContains('currencies', $currency);
+    }
+
+    public function scopeHighPerformance($query, $minRating = 4.0)
+    {
+        return $query->where('performance_rating', '>=', $minRating);
+    }
+
+    public function scopeHighTrust($query, $minScore = 80)
+    {
+        return $query->where('trust_score', '>=', $minScore);
+    }
+
+    public function scopeRecentSync($query, $days = 7)
+    {
+        return $query->where('last_sync_date', '>=', now()->subDays($days));
     }
 
     public function scopeNeedsSync($query)
     {
-        return $query->where('auto_sync', true)
-                    ->where(function($q) {
-                        $q->whereNull('last_sync_at')
-                          ->orWhere('last_sync_at', '<=', now()->subHours($this->getSyncInterval()));
-                    });
+        return $query->where(function ($q) {
+            $q->whereNull('last_sync_date')
+              ->orWhere('last_sync_date', '<', now()->subDays(1));
+        });
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%")
+              ->orWhere('network_type', 'like', "%{$search}%");
+        });
     }
 
     // Accessors
+    public function getIsActiveAttribute()
+    {
+        return $this->status === 'active';
+    }
+
+    public function getIsVerifiedAttribute()
+    {
+        return $this->verification_status === 'verified';
+    }
+
+    public function getIsPendingAttribute()
+    {
+        return $this->verification_status === 'pending';
+    }
+
+    public function getIsRejectedAttribute()
+    {
+        return $this->verification_status === 'rejected';
+    }
+
+    public function getIsSuspendedAttribute()
+    {
+        return $this->status === 'suspended';
+    }
+
+    public function getIsTokenExpiredAttribute()
+    {
+        return $this->token_expires_at && $this->token_expires_at < now();
+    }
+
+    public function getNeedsTokenRefreshAttribute()
+    {
+        return $this->token_expires_at && $this->token_expires_at < now()->addDays(1);
+    }
+
+    public function getLogoUrlAttribute()
+    {
+        if ($this->logo) {
+            return asset('storage/affiliates/' . $this->logo);
+        }
+        return asset('images/default-affiliate-logo.png');
+    }
+
     public function getNetworkTypeTextAttribute()
     {
-        return match($this->network_type) {
+        return match ($this->network_type) {
             'vcommission' => 'vCommission',
             'cuelinks' => 'Cuelinks',
             'optimisemedia' => 'OptimiseMedia',
@@ -167,27 +277,41 @@ class Affiliate extends Model
             'amazon' => 'Amazon Associates',
             'flipkart' => 'Flipkart Affiliate',
             'custom' => 'Custom Network',
-            default => 'Unknown'
+            default => ucfirst($this->network_type)
         };
     }
 
     public function getNetworkTypeIconAttribute()
     {
-        return match($this->network_type) {
+        return match ($this->network_type) {
             'vcommission' => 'fas fa-chart-line',
             'cuelinks' => 'fas fa-link',
-            'optimisemedia' => 'fas fa-bullseye',
+            'optimisemedia' => 'fas fa-bullhorn',
             'inrdeals' => 'fas fa-rupee-sign',
             'amazon' => 'fab fa-amazon',
-            'flipkart' => 'fas fa-shopping-cart',
+            'flipkart' => 'fas fa-shopping-bag',
             'custom' => 'fas fa-network-wired',
-            default => 'fas fa-question'
+            default => 'fas fa-network-wired'
+        };
+    }
+
+    public function getNetworkTypeColorAttribute()
+    {
+        return match ($this->network_type) {
+            'vcommission' => 'primary',
+            'cuelinks' => 'success',
+            'optimisemedia' => 'info',
+            'inrdeals' => 'warning',
+            'amazon' => 'dark',
+            'flipkart' => 'danger',
+            'custom' => 'secondary',
+            default => 'secondary'
         };
     }
 
     public function getStatusTextAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'active' => 'Active',
             'inactive' => 'Inactive',
             'pending' => 'Pending',
@@ -198,7 +322,7 @@ class Affiliate extends Model
 
     public function getStatusColorAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'active' => 'success',
             'inactive' => 'secondary',
             'pending' => 'warning',
@@ -207,251 +331,390 @@ class Affiliate extends Model
         };
     }
 
-    public function getPayoutScheduleTextAttribute()
+    public function getVerificationStatusTextAttribute()
     {
-        return match($this->payout_schedule) {
-            'weekly' => 'Weekly',
-            'monthly' => 'Monthly',
-            'quarterly' => 'Quarterly',
-            default => 'Not Set'
+        return match ($this->verification_status) {
+            'pending' => 'Pending Verification',
+            'verified' => 'Verified',
+            'rejected' => 'Rejected',
+            default => 'Unknown'
+        };
+    }
+
+    public function getVerificationStatusColorAttribute()
+    {
+        return match ($this->verification_status) {
+            'pending' => 'warning',
+            'verified' => 'success',
+            'rejected' => 'danger',
+            default => 'secondary'
         };
     }
 
     public function getCommissionTextAttribute()
     {
         if ($this->commission_type === 'percentage') {
-            return "{$this->commission_rate}% Commission";
+            return "{$this->commission_rate}%";
+        } elseif ($this->commission_type === 'fixed') {
+            return "₹{$this->commission_rate}";
         }
-        return "{$this->commission_rate} Fixed Commission";
+        return 'Variable';
     }
 
-    public function getLogoUrlAttribute()
+    public function getFormattedMinimumPayoutAttribute()
     {
-        return $this->logo ?: asset('images/default-affiliate-logo.jpg');
+        return "₹{$this->minimum_payout}";
     }
 
-    public function getBannerUrlAttribute()
+    public function getPayoutScheduleTextAttribute()
     {
-        return $this->banner ?: asset('images/default-affiliate-banner.jpg');
-    }
-
-    public function getIsTokenExpiredAttribute()
-    {
-        return $this->token_expires_at && $this->token_expires_at < now();
-    }
-
-    public function getNeedsTokenRefreshAttribute()
-    {
-        return $this->token_expires_at && $this->token_expires_at->diffInHours(now()) < 24;
-    }
-
-    public function getSyncIntervalAttribute()
-    {
-        return match($this->sync_frequency) {
-            'hourly' => 1,
-            'daily' => 24,
-            'weekly' => 168,
-            default => 24
+        return match ($this->payout_schedule) {
+            'weekly' => 'Weekly',
+            'monthly' => 'Monthly',
+            'quarterly' => 'Quarterly',
+            default => 'Variable'
         };
     }
 
-    public function getPerformanceMetricsAttribute($value)
+    public function getFormattedPerformanceRatingAttribute()
     {
-        $metrics = $value ?: [];
-        
-        return array_merge([
-            'total_clicks' => 0,
-            'total_conversions' => 0,
-            'total_revenue' => 0,
-            'total_commission' => 0,
-            'conversion_rate' => 0,
-            'avg_order_value' => 0,
-            'last_month_clicks' => 0,
-            'last_month_conversions' => 0,
-            'last_month_revenue' => 0,
-            'last_month_commission' => 0
-        ], $metrics);
+        if ($this->performance_rating) {
+            return number_format($this->performance_rating, 1) . '/5.0';
+        }
+        return 'Not Rated';
+    }
+
+    public function getFormattedTrustScoreAttribute()
+    {
+        if ($this->trust_score) {
+            return "{$this->trust_score}/100";
+        }
+        return 'Not Rated';
+    }
+
+    public function getLastSyncTextAttribute()
+    {
+        if ($this->last_sync_date) {
+            return $this->last_sync_date->diffForHumans();
+        }
+        return 'Never';
+    }
+
+    public function getLastReportTextAttribute()
+    {
+        if ($this->last_report_date) {
+            return $this->last_report_date->diffForHumans();
+        }
+        return 'Never';
+    }
+
+    public function getLastErrorTextAttribute()
+    {
+        if ($this->last_error_date) {
+            return $this->last_error_date->diffForHumans();
+        }
+        return 'Never';
+    }
+
+    public function getSyncStatusTextAttribute()
+    {
+        return match ($this->sync_status) {
+            'success' => 'Successful',
+            'failed' => 'Failed',
+            'pending' => 'Pending',
+            default => 'Unknown'
+        };
+    }
+
+    public function getSyncStatusColorAttribute()
+    {
+        return match ($this->sync_status) {
+            'success' => 'success',
+            'failed' => 'danger',
+            'pending' => 'warning',
+            default => 'secondary'
+        };
+    }
+
+    public function getFeaturesListAttribute()
+    {
+        if ($this->features && is_array($this->features)) {
+            return implode(', ', $this->features);
+        }
+        return 'No features specified';
+    }
+
+    public function getRestrictionsListAttribute()
+    {
+        if ($this->restrictions && is_array($this->restrictions)) {
+            return implode(', ', $this->restrictions);
+        }
+        return 'No restrictions';
+    }
+
+    public function getCategoriesListAttribute()
+    {
+        if ($this->categories && is_array($this->categories)) {
+            return implode(', ', $this->categories);
+        }
+        return 'All categories';
+    }
+
+    public function getCountriesListAttribute()
+    {
+        if ($this->countries && is_array($this->countries)) {
+            return implode(', ', $this->countries);
+        }
+        return 'All countries';
+    }
+
+    public function getCurrenciesListAttribute()
+    {
+        if ($this->currencies && is_array($this->currencies)) {
+            return implode(', ', $this->currencies);
+        }
+        return 'INR';
+    }
+
+    public function getLanguagesListAttribute()
+    {
+        if ($this->languages && is_array($this->languages)) {
+            return implode(', ', $this->languages);
+        }
+        return 'English';
+    }
+
+    public function getPaymentMethodsListAttribute()
+    {
+        if ($this->payment_methods && is_array($this->payment_methods)) {
+            return implode(', ', $this->payment_methods);
+        }
+        return 'Bank Transfer';
     }
 
     // Methods
-    public function syncData()
+    public function activate()
     {
-        try {
-            $method = "sync" . ucfirst($this->network_type);
-            
-            if (method_exists($this, $method)) {
-                $result = $this->$method();
-                $this->update(['last_sync_at' => now()]);
-                return $result;
-            }
-            
-            throw new \Exception("Sync method not implemented for network type: {$this->network_type}");
-            
-        } catch (\Exception $e) {
-            \Log::error("Failed to sync affiliate data for {$this->name}: " . $e->getMessage());
-            throw $e;
-        }
+        $this->update([
+            'status' => 'active',
+            'activated_at' => now(),
+        ]);
     }
 
-    public function refreshToken()
+    public function deactivate()
     {
-        if (!$this->refresh_token) {
-            throw new \Exception('No refresh token available');
-        }
-
-        try {
-            $method = "refresh" . ucfirst($this->network_type) . "Token";
-            
-            if (method_exists($this, $method)) {
-                return $this->$method();
-            }
-            
-            throw new \Exception("Token refresh method not implemented for network type: {$this->network_type}");
-            
-        } catch (\Exception $e) {
-            \Log::error("Failed to refresh token for {$this->name}: " . $e->getMessage());
-            throw $e;
-        }
+        $this->update([
+            'status' => 'inactive',
+            'deactivated_at' => now(),
+        ]);
     }
 
-    public function testConnection()
+    public function suspend()
     {
-        try {
-            $method = "test" . ucfirst($this->network_type) . "Connection";
-            
-            if (method_exists($this, $method)) {
-                return $this->$method();
-            }
-            
-            throw new \Exception("Connection test method not implemented for network type: {$this->network_type}");
-            
-        } catch (\Exception $e) {
-            \Log::error("Failed to test connection for {$this->name}: " . $e->getMessage());
-            throw $e;
-        }
+        $this->update([
+            'status' => 'suspended',
+            'deactivated_at' => now(),
+        ]);
     }
 
-    public function generateTrackingLink($baseUrl, $userId = null, $campaign = null)
+    public function verify()
     {
-        $trackingParams = $this->tracking_parameters ?: [];
-        $url = $baseUrl;
-        
-        // Add network-specific tracking parameters
-        $separator = strpos($url, '?') !== false ? '&' : '?';
-        
-        foreach ($trackingParams as $key => $value) {
-            $url .= $separator . urlencode($key) . '=' . urlencode($value);
-            $separator = '&';
-        }
-        
-        // Add user tracking if available
-        if ($userId) {
-            $url .= $separator . 'ref=' . urlencode($userId);
-        }
-        
-        // Add campaign tracking if available
-        if ($campaign) {
-            $url .= $separator . 'utm_campaign=' . urlencode($campaign);
-        }
-        
-        return $url;
+        $this->update([
+            'verification_status' => 'verified',
+            'verification_date' => now(),
+        ]);
     }
 
-    public function updatePerformanceMetrics()
+    public function reject($notes = null)
     {
-        $metrics = [
-            'total_clicks' => $this->clicks()->count(),
-            'total_conversions' => $this->conversions()->count(),
-            'total_revenue' => $this->conversions()->sum('amount'),
-            'total_commission' => $this->conversions()->sum('commission'),
-            'conversion_rate' => $this->clicks()->count() > 0 ? 
-                ($this->conversions()->count() / $this->clicks()->count()) * 100 : 0,
-            'avg_order_value' => $this->conversions()->count() > 0 ? 
-                $this->conversions()->avg('amount') : 0
+        $this->update([
+            'verification_status' => 'rejected',
+            'verification_notes' => $notes,
+        ]);
+    }
+
+    public function updateToken($accessToken, $refreshToken = null, $expiresAt = null)
+    {
+        $this->update([
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken ?: $this->refresh_token,
+            'token_expires_at' => $expiresAt,
+        ]);
+    }
+
+    public function updateSyncStatus($status, $notes = null)
+    {
+        $this->update([
+            'sync_status' => $status,
+            'sync_notes' => $notes,
+            'last_sync_date' => now(),
+        ]);
+    }
+
+    public function updateLastReport()
+    {
+        $this->update(['last_report_date' => now()]);
+    }
+
+    public function recordError($error)
+    {
+        $this->update([
+            'last_error' => $error,
+            'last_error_date' => now(),
+            'error_count' => $this->error_count + 1,
+        ]);
+    }
+
+    public function resetErrorCount()
+    {
+        $this->update(['error_count' => 0]);
+    }
+
+    public function updatePerformanceRating($rating)
+    {
+        $this->update(['performance_rating' => $rating]);
+    }
+
+    public function updateTrustScore($score)
+    {
+        $this->update(['trust_score' => $score]);
+    }
+
+    public function hasFeature($feature)
+    {
+        return $this->features && in_array($feature, $this->features);
+    }
+
+    public function supportsCategory($category)
+    {
+        return !$this->categories || in_array($category, $this->categories);
+    }
+
+    public function supportsCountry($country)
+    {
+        return !$this->countries || in_array($country, $this->countries);
+    }
+
+    public function supportsCurrency($currency)
+    {
+        return !$this->currencies || in_array($currency, $this->currencies);
+    }
+
+    public function supportsLanguage($language)
+    {
+        return !$this->languages || in_array($language, $this->languages);
+    }
+
+    public function supportsPaymentMethod($method)
+    {
+        return !$this->payment_methods || in_array($method, $this->payment_methods);
+    }
+
+    public function canSync()
+    {
+        return $this->is_active && 
+               $this->is_verified && 
+               $this->api_key && 
+               $this->api_endpoint;
+    }
+
+    public function needsTokenRefresh()
+    {
+        return $this->token_expires_at && $this->token_expires_at < now()->addDays(1);
+    }
+
+    public function getApiCredentials()
+    {
+        return [
+            'api_key' => $this->api_key,
+            'api_secret' => $this->api_secret,
+            'access_token' => $this->access_token,
+            'refresh_token' => $this->refresh_token,
+            'tracking_id' => $this->tracking_id,
+            'affiliate_id' => $this->affiliate_id,
         ];
-        
-        // Last month metrics
-        $lastMonth = now()->subMonth();
-        $metrics['last_month_clicks'] = $this->clicks()->whereMonth('created_at', $lastMonth->month)->count();
-        $metrics['last_month_conversions'] = $this->conversions()->whereMonth('created_at', $lastMonth->month)->count();
-        $metrics['last_month_revenue'] = $this->conversions()->whereMonth('created_at', $lastMonth->month)->sum('amount');
-        $metrics['last_month_commission'] = $this->conversions()->whereMonth('created_at', $lastMonth->month)->sum('commission');
-        
-        $this->update(['performance_metrics' => $metrics]);
-        
-        return $metrics;
     }
 
-    // Network-specific sync methods
-    public function syncVcommission()
+    public function getApiConfig()
     {
-        // Implementation for vCommission API sync
-        // This would fetch coupons, deals, and products from vCommission
-        return ['status' => 'success', 'message' => 'vCommission data synced successfully'];
+        return [
+            'endpoint' => $this->api_endpoint,
+            'network_type' => $this->network_type,
+            'credentials' => $this->getApiCredentials(),
+            'features' => $this->features,
+            'restrictions' => $this->restrictions,
+        ];
     }
 
-    public function syncCuelinks()
+    // Static Methods
+    public static function getActiveNetworks()
     {
-        // Implementation for Cuelinks API sync
-        return ['status' => 'success', 'message' => 'Cuelinks data synced successfully'];
+        return static::active()->verified()->get();
     }
 
-    public function syncOptimisemedia()
+    public static function getNetworksByType($type)
     {
-        // Implementation for OptimiseMedia API sync
-        return ['status' => 'success', 'message' => 'OptimiseMedia data synced successfully'];
+        return static::active()->verified()->byNetworkType($type)->get();
     }
 
-    public function syncInrdeals()
+    public static function getNetworksByCategory($category)
     {
-        // Implementation for INR Deals API sync
-        return ['status' => 'success', 'message' => 'INR Deals data synced successfully'];
+        return static::active()->verified()->byCategory($category)->get();
     }
 
-    public function syncAmazon()
+    public static function getHighPerformanceNetworks($minRating = 4.0)
     {
-        // Implementation for Amazon Associates API sync
-        return ['status' => 'success', 'message' => 'Amazon data synced successfully'];
+        return static::active()->verified()->highPerformance($minRating)->get();
     }
 
-    public function syncFlipkart()
+    public static function getNetworksNeedingSync()
     {
-        // Implementation for Flipkart Affiliate API sync
-        return ['status' => 'success', 'message' => 'Flipkart data synced successfully'];
+        return static::active()->verified()->needsSync()->get();
     }
 
-    // Token refresh methods
-    public function refreshVcommissionToken()
+    public static function getNetworkStats()
     {
-        // Implementation for vCommission token refresh
-        return ['status' => 'success', 'message' => 'vCommission token refreshed successfully'];
+        $total = static::count();
+        $active = static::active()->count();
+        $verified = static::verified()->count();
+        $pending = static::byVerificationStatus('pending')->count();
+        $suspended = static::byStatus('suspended')->count();
+
+        $byType = static::selectRaw('network_type, COUNT(*) as count')
+                        ->groupBy('network_type')
+                        ->get()
+                        ->keyBy('network_type');
+
+        return [
+            'total' => $total,
+            'active' => $active,
+            'verified' => $verified,
+            'pending' => $pending,
+            'suspended' => $suspended,
+            'by_type' => $byType,
+        ];
     }
 
-    // Connection test methods
-    public function testVcommissionConnection()
+    public static function cleanupExpiredTokens()
     {
-        // Implementation for vCommission connection test
-        return ['status' => 'success', 'message' => 'vCommission connection successful'];
+        return static::where('token_expires_at', '<', now())
+                    ->update([
+                        'access_token' => null,
+                        'refresh_token' => null,
+                        'token_expires_at' => null,
+                    ]);
     }
 
-    // Events
-    protected static function booted()
+    public static function getNetworksForSync()
     {
-        static::created(function ($affiliate) {
-            // Log activity
-            activity()
-                ->performedOn($affiliate)
-                ->causedBy($affiliate->creator)
-                ->log('created affiliate network');
-        });
-
-        static::updated(function ($affiliate) {
-            if ($affiliate->wasChanged('status')) {
-                activity()
-                    ->performedOn($affiliate)
-                    ->causedBy(auth()->user())
-                    ->log("updated affiliate status to {$affiliate->status}");
-            }
-        });
+        return static::active()
+                    ->verified()
+                    ->whereNotNull('api_key')
+                    ->whereNotNull('api_endpoint')
+                    ->where(function ($q) {
+                        $q->whereNull('last_sync_date')
+                          ->orWhere('last_sync_date', '<', now()->subDays(1));
+                    })
+                    ->get();
     }
 }

@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
-class Product extends Model
+class Product extends Model implements HasMedia
 {
     use HasFactory, SoftDeletes, InteractsWithMedia, HasSlug;
 
@@ -22,71 +23,87 @@ class Product extends Model
         'brand',
         'model',
         'sku',
-        'price',
-        'sale_price',
+        'original_price',
+        'current_price',
         'currency',
         'availability', // in_stock, out_of_stock, pre_order, discontinued
         'stock_quantity',
+        'unlimited_stock',
+        'min_order_quantity',
+        'max_order_quantity',
         'weight',
         'dimensions',
         'color',
         'size',
         'material',
         'warranty',
-        'rating',
-        'review_count',
-        'is_featured',
-        'is_popular',
-        'is_active',
+        'shipping_info',
+        'return_policy',
         'affiliate_link',
-        'tracking_id',
+        'affiliate_network',
         'commission_rate',
         'commission_type', // percentage, fixed
+        'tracking_id',
+        'status', // active, inactive, featured, popular
+        'featured',
+        'popular',
+        'trending',
+        'rating',
+        'review_count',
+        'view_count',
+        'click_count',
+        'conversion_count',
+        'favorite_count',
         'meta_title',
         'meta_description',
         'meta_keywords',
         'og_image',
         'twitter_image',
-        'created_by',
-        'status', // active, inactive, draft
-        'priority',
-        'tags',
-        'specifications', // JSON
-        'features', // JSON
+        'popup_enabled',
+        'popup_delay',
+        'popup_animation',
+        'popup_position',
+        'popup_style',
         'button_text',
         'button_color',
         'button_hover_effect',
-        'seo_score',
-        'page_speed_score'
+        'created_by',
+        'updated_by',
+        'published_at',
+        'featured_until',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'sale_price' => 'decimal:2',
-        'weight' => 'decimal:2',
-        'dimensions' => 'array',
-        'rating' => 'decimal:1',
-        'review_count' => 'integer',
-        'stock_quantity' => 'integer',
-        'is_featured' => 'boolean',
-        'is_popular' => 'boolean',
-        'is_active' => 'boolean',
+        'published_at' => 'datetime',
+        'featured_until' => 'datetime',
+        'featured' => 'boolean',
+        'popular' => 'boolean',
+        'trending' => 'boolean',
+        'unlimited_stock' => 'boolean',
+        'popup_enabled' => 'boolean',
+        'original_price' => 'decimal:2',
+        'current_price' => 'decimal:2',
         'commission_rate' => 'decimal:2',
-        'priority' => 'integer',
-        'tags' => 'array',
-        'specifications' => 'array',
-        'features' => 'array',
-        'seo_score' => 'integer',
-        'page_speed_score' => 'integer',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'weight' => 'decimal:2',
+        'rating' => 'decimal:1',
+        'stock_quantity' => 'integer',
+        'min_order_quantity' => 'integer',
+        'max_order_quantity' => 'integer',
+        'review_count' => 'integer',
+        'view_count' => 'integer',
+        'click_count' => 'integer',
+        'conversion_count' => 'integer',
+        'favorite_count' => 'integer',
+        'popup_delay' => 'integer',
+        'dimensions' => 'array',
+        'color' => 'array',
+        'size' => 'array',
     ];
 
     protected $dates = [
-        'created_at',
-        'updated_at',
-        'deleted_at'
+        'published_at',
+        'featured_until',
+        'deleted_at',
     ];
 
     // Relationships
@@ -105,9 +122,19 @@ class Product extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function favorites()
     {
-        return $this->morphMany(Favorite::class, 'favoritable');
+        return $this->morphMany(Favorite::class, 'favorable');
+    }
+
+    public function notifications()
+    {
+        return $this->morphMany(Notification::class, 'notifiable');
     }
 
     public function clicks()
@@ -127,29 +154,52 @@ class Product extends Model
 
     public function relatedProducts()
     {
-        return $this->belongsToMany(Product::class, 'related_products', 'product_id', 'related_id');
+        return $this->belongsToMany(Product::class, 'related_products', 'product_id', 'related_product_id');
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class);
     }
 
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
-                    ->where('status', 'active');
+        return $query->where('status', 'active');
     }
 
     public function scopeFeatured($query)
     {
-        return $query->where('is_featured', true);
+        return $query->where('featured', true)
+                    ->where(function ($q) {
+                        $q->whereNull('featured_until')
+                          ->orWhere('featured_until', '>', now());
+                    });
     }
 
     public function scopePopular($query)
     {
-        return $query->where('is_popular', true);
+        return $query->where('popular', true);
+    }
+
+    public function scopeTrending($query)
+    {
+        return $query->where('trending', true);
     }
 
     public function scopeInStock($query)
     {
         return $query->where('availability', 'in_stock');
+    }
+
+    public function scopeByPriceRange($query, $min, $max)
+    {
+        return $query->whereBetween('current_price', [$min, $max]);
+    }
+
+    public function scopeByBrand($query, $brand)
+    {
+        return $query->where('brand', $brand);
     }
 
     public function scopeByStore($query, $storeId)
@@ -162,16 +212,6 @@ class Product extends Model
         return $query->where('category_id', $categoryId);
     }
 
-    public function scopeByBrand($query, $brand)
-    {
-        return $query->where('brand', $brand);
-    }
-
-    public function scopeByPriceRange($query, $min, $max)
-    {
-        return $query->whereBetween('price', [$min, $max]);
-    }
-
     public function scopeByRating($query, $minRating)
     {
         return $query->where('rating', '>=', $minRating);
@@ -179,63 +219,102 @@ class Product extends Model
 
     public function scopeSearch($query, $search)
     {
-        return $query->where(function($q) use ($search) {
+        return $query->where(function ($q) use ($search) {
             $q->where('title', 'like', "%{$search}%")
               ->orWhere('description', 'like', "%{$search}%")
+              ->orWhere('short_description', 'like', "%{$search}%")
               ->orWhere('brand', 'like', "%{$search}%")
-              ->orWhere('sku', 'like', "%{$search}%")
-              ->orWhere('tags', 'like', "%{$search}%");
+              ->orWhere('model', 'like', "%{$search}%")
+              ->orWhere('sku', 'like', "%{$search}%");
         });
     }
 
     // Accessors
-    public function getIsOnSaleAttribute()
+    public function getIsInStockAttribute()
     {
-        return $this->sale_price && $this->sale_price < $this->price;
+        return $this->availability === 'in_stock' && 
+               ($this->unlimited_stock || $this->stock_quantity > 0);
+    }
+
+    public function getIsFeaturedAttribute()
+    {
+        return $this->featured && 
+               (!$this->featured_until || $this->featured_until > now());
     }
 
     public function getDiscountPercentageAttribute()
     {
-        if (!$this->is_on_sale || $this->price <= 0) return 0;
-        return round((($this->price - $this->sale_price) / $this->price) * 100);
+        if ($this->original_price > 0 && $this->current_price < $this->original_price) {
+            return round((($this->original_price - $this->current_price) / $this->original_price) * 100, 1);
+        }
+        return 0;
     }
 
     public function getSavingsAmountAttribute()
     {
-        if (!$this->is_on_sale) return 0;
-        return $this->price - $this->sale_price;
+        if ($this->original_price > 0 && $this->current_price < $this->original_price) {
+            return $this->original_price - $this->current_price;
+        }
+        return 0;
     }
 
-    public function getCurrentPriceAttribute()
+    public function getDiscountTextAttribute()
     {
-        return $this->is_on_sale ? $this->sale_price : $this->price;
+        if ($this->discount_percentage > 0) {
+            return "Save {$this->discount_percentage}%";
+        }
+        return null;
     }
 
     public function getStoreNameAttribute()
     {
-        return $this->store ? $this->store->name : 'Unknown Store';
+        return $this->store->name ?? 'Unknown Store';
     }
 
     public function getCategoryNameAttribute()
     {
-        return $this->category ? $this->category->name : 'Uncategorized';
+        return $this->category->name ?? 'Uncategorized';
     }
 
     public function getImageUrlAttribute()
     {
-        return $this->getFirstMediaUrl('products', 'medium') ?: asset('images/default-product.jpg');
+        return $this->getFirstMediaUrl('products', 'thumb') ?: asset('images/default-product.jpg');
     }
 
-    public function getThumbnailUrlAttribute()
+    public function getGalleryUrlsAttribute()
     {
-        return $this->getFirstMediaUrl('products', 'thumbnail') ?: asset('images/default-product-thumb.jpg');
-    }
-
-    public function getGalleryImagesAttribute()
-    {
-        return $this->getMedia('gallery')->map(function($media) {
+        return $this->getMedia('gallery')->map(function ($media) {
             return $media->getUrl();
         });
+    }
+
+    public function getFormattedPriceAttribute()
+    {
+        return "₹{$this->current_price}";
+    }
+
+    public function getFormattedOriginalPriceAttribute()
+    {
+        return "₹{$this->original_price}";
+    }
+
+    public function getFormattedWeightAttribute()
+    {
+        if ($this->weight) {
+            return "{$this->weight} kg";
+        }
+        return null;
+    }
+
+    public function getFormattedDimensionsAttribute()
+    {
+        if ($this->dimensions && is_array($this->dimensions)) {
+            $dims = $this->dimensions;
+            if (isset($dims['length']) && isset($dims['width']) && isset($dims['height'])) {
+                return "{$dims['length']} × {$dims['width']} × {$dims['height']} cm";
+            }
+        }
+        return null;
     }
 
     public function getRatingStarsAttribute()
@@ -248,13 +327,16 @@ class Product extends Model
         return [
             'full' => $fullStars,
             'half' => $halfStar ? 1 : 0,
-            'empty' => $emptyStars
+            'empty' => $emptyStars,
         ];
     }
 
     public function getFormattedRatingAttribute()
     {
-        return number_format($this->rating ?: 0, 1);
+        if ($this->rating) {
+            return number_format($this->rating, 1);
+        }
+        return 'No ratings';
     }
 
     public function getButtonTextAttribute($value)
@@ -262,55 +344,52 @@ class Product extends Model
         return $value ?: 'Check Product';
     }
 
-    public function getAvailabilityTextAttribute()
-    {
-        return match($this->availability) {
-            'in_stock' => 'In Stock',
-            'out_of_stock' => 'Out of Stock',
-            'pre_order' => 'Pre-order',
-            'discontinued' => 'Discontinued',
-            default => 'Unknown'
-        };
-    }
-
     // Methods
-    public function trackClick($userId = null, $ip = null, $userAgent = null)
+    public function incrementViewCount()
     {
-        return $this->clicks()->create([
-            'user_id' => $userId,
-            'ip_address' => $ip,
-            'user_agent' => $userAgent,
-            'clicked_at' => now()
-        ]);
+        $this->increment('view_count');
     }
 
-    public function trackConversion($userId = null, $orderId = null, $amount = null, $commission = null)
+    public function incrementClickCount()
     {
-        return $this->conversions()->create([
-            'user_id' => $userId,
-            'order_id' => $orderId,
-            'amount' => $amount,
-            'commission' => $commission,
-            'converted_at' => now()
-        ]);
+        $this->increment('click_count');
+    }
+
+    public function incrementConversionCount()
+    {
+        $this->increment('conversion_count');
+    }
+
+    public function incrementFavoriteCount()
+    {
+        $this->increment('favorite_count');
+    }
+
+    public function decrementFavoriteCount()
+    {
+        $this->decrement('favorite_count');
     }
 
     public function updateRating()
     {
         $avgRating = $this->reviews()->avg('rating');
-        $reviewCount = $this->reviews()->count();
-        
-        $this->update([
-            'rating' => $avgRating ?: 0,
-            'review_count' => $reviewCount
-        ]);
+        $this->update(['rating' => round($avgRating, 1)]);
     }
 
-    public function isAvailable()
+    public function isAvailableForOrder($quantity = 1)
     {
-        return $this->is_active && 
-               $this->status === 'active' && 
-               $this->availability === 'in_stock';
+        if ($this->availability !== 'in_stock') {
+            return false;
+        }
+        
+        if ($this->unlimited_stock) {
+            return $quantity >= $this->min_order_quantity && 
+                   ($this->max_order_quantity === 0 || $quantity <= $this->max_order_quantity);
+        }
+        
+        return $this->stock_quantity >= $quantity && 
+               $quantity >= $this->min_order_quantity && 
+               ($this->max_order_quantity === 0 || $quantity <= $this->max_order_quantity);
     }
 
     public function getSlugOptions(): SlugOptions
@@ -331,46 +410,32 @@ class Product extends Model
             ->useDisk('public');
     }
 
-    // SEO Methods
-    public function getSeoTitle()
+    public function getSeoData()
     {
-        return $this->meta_title ?: $this->title;
+        return [
+            'title' => $this->meta_title ?: $this->title,
+            'description' => $this->meta_description ?: $this->short_description,
+            'keywords' => $this->meta_keywords,
+            'og_image' => $this->og_image ?: $this->image_url,
+            'twitter_image' => $this->twitter_image ?: $this->image_url,
+        ];
     }
 
-    public function getSeoDescription()
+    public function getRelatedProducts($limit = 4)
     {
-        return $this->meta_description ?: Str::limit($this->description, 160);
+        return $this->relatedProducts()
+                    ->where('status', 'active')
+                    ->limit($limit)
+                    ->get();
     }
 
-    public function getSeoKeywords()
+    public function getSimilarProducts($limit = 4)
     {
-        return $this->meta_keywords ?: implode(', ', $this->tags ?? []);
-    }
-
-    public function getOgImage()
-    {
-        return $this->og_image ?: $this->image_url;
-    }
-
-    public function getTwitterImage()
-    {
-        return $this->twitter_image ?: $this->image_url;
-    }
-
-    // Performance Methods
-    public function calculateSeoScore()
-    {
-        $score = 0;
-        
-        if ($this->meta_title) $score += 20;
-        if ($this->meta_description) $score += 20;
-        if ($this->meta_keywords) $score += 15;
-        if ($this->description && strlen($this->description) > 100) $score += 15;
-        if ($this->tags && count($this->tags) > 0) $score += 10;
-        if ($this->specifications && count($this->specifications) > 0) $score += 10;
-        if ($this->features && count($this->features) > 0) $score += 10;
-        
-        $this->update(['seo_score' => $score]);
-        return $score;
+        return static::where('category_id', $this->category_id)
+                    ->where('id', '!=', $this->id)
+                    ->where('status', 'active')
+                    ->where('store_id', $this->store_id)
+                    ->limit($limit)
+                    ->get();
     }
 }

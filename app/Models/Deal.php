@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
-class Deal extends Model
+class Deal extends Model implements HasMedia
 {
     use HasFactory, SoftDeletes, InteractsWithMedia, HasSlug;
 
@@ -19,70 +20,83 @@ class Deal extends Model
         'short_description',
         'store_id',
         'category_id',
-        'deal_type', // percentage, fixed, free_shipping, buy_one_get_one
-        'discount_value',
+        'deal_type', // percentage, fixed, free_shipping, etc.
         'original_price',
         'deal_price',
+        'discount_percentage',
+        'discount_amount',
         'currency',
         'start_date',
         'end_date',
-        'is_featured',
-        'is_popular',
-        'is_active',
+        'status', // active, inactive, expired, featured
+        'featured',
+        'popular',
         'affiliate_link',
-        'tracking_id',
+        'affiliate_network',
         'commission_rate',
+        'commission_type', // percentage, fixed
+        'terms_conditions',
+        'restrictions',
+        'stock_quantity',
+        'unlimited_stock',
         'min_purchase',
         'max_discount',
         'usage_limit',
         'used_count',
+        'view_count',
+        'click_count',
+        'conversion_count',
+        'rating',
+        'review_count',
         'meta_title',
         'meta_description',
         'meta_keywords',
         'og_image',
         'twitter_image',
+        'popup_enabled',
+        'popup_delay',
+        'popup_animation',
+        'popup_position',
+        'popup_style',
         'created_by',
-        'status', // active, inactive, expired, scheduled
-        'priority',
-        'tags',
-        'conditions',
-        'exclusions',
-        'popup_settings', // JSON for popup customization
-        'button_text',
-        'button_color',
-        'button_hover_effect'
+        'updated_by',
+        'published_at',
+        'expires_at',
     ];
 
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
-        'is_featured' => 'boolean',
-        'is_popular' => 'boolean',
-        'is_active' => 'boolean',
+        'published_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'featured' => 'boolean',
+        'popular' => 'boolean',
+        'unlimited_stock' => 'boolean',
+        'popup_enabled' => 'boolean',
         'original_price' => 'decimal:2',
         'deal_price' => 'decimal:2',
-        'discount_value' => 'decimal:2',
+        'discount_percentage' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'commission_rate' => 'decimal:2',
         'min_purchase' => 'decimal:2',
         'max_discount' => 'decimal:2',
+        'rating' => 'decimal:1',
+        'stock_quantity' => 'integer',
         'usage_limit' => 'integer',
         'used_count' => 'integer',
-        'priority' => 'integer',
-        'tags' => 'array',
-        'conditions' => 'array',
-        'exclusions' => 'array',
-        'popup_settings' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'view_count' => 'integer',
+        'click_count' => 'integer',
+        'conversion_count' => 'integer',
+        'review_count' => 'integer',
+        'popup_delay' => 'integer',
     ];
 
     protected $dates = [
         'start_date',
         'end_date',
-        'created_at',
-        'updated_at',
-        'deleted_at'
+        'published_at',
+        'expires_at',
+        'deleted_at',
     ];
 
     // Relationships
@@ -101,9 +115,19 @@ class Deal extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function favorites()
     {
-        return $this->morphMany(Favorite::class, 'favoritable');
+        return $this->morphMany(Favorite::class, 'favorable');
+    }
+
+    public function notifications()
+    {
+        return $this->morphMany(Notification::class, 'notifiable');
     }
 
     public function clicks()
@@ -124,20 +148,19 @@ class Deal extends Model
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
-                    ->where('status', 'active')
+        return $query->where('status', 'active')
                     ->where('start_date', '<=', now())
                     ->where('end_date', '>=', now());
     }
 
     public function scopeFeatured($query)
     {
-        return $query->where('is_featured', true);
+        return $query->where('featured', true);
     }
 
     public function scopePopular($query)
     {
-        return $query->where('is_popular', true);
+        return $query->where('popular', true);
     }
 
     public function scopeExpiring($query, $days = 7)
@@ -166,103 +189,134 @@ class Deal extends Model
         return $query->whereBetween('deal_price', [$min, $max]);
     }
 
+    public function scopeByDiscount($query, $minDiscount)
+    {
+        return $query->where('discount_percentage', '>=', $minDiscount);
+    }
+
     public function scopeSearch($query, $search)
     {
-        return $query->where(function($q) use ($search) {
+        return $query->where(function ($q) use ($search) {
             $q->where('title', 'like', "%{$search}%")
               ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('tags', 'like', "%{$search}%");
+              ->orWhere('short_description', 'like', "%{$search}%");
         });
     }
 
     // Accessors
-    public function getExpiredAttribute()
+    public function getIsActiveAttribute()
+    {
+        return $this->status === 'active' && 
+               $this->start_date <= now() && 
+               $this->end_date >= now();
+    }
+
+    public function getIsExpiredAttribute()
     {
         return $this->end_date < now();
     }
 
-    public function getExpiresInDaysAttribute()
+    public function getIsUpcomingAttribute()
     {
-        if ($this->expired) return 0;
-        return now()->diffInDays($this->end_date, false);
+        return $this->start_date > now();
     }
 
-    public function getDiscountPercentageAttribute()
+    public function getDiscountTextAttribute()
     {
-        if ($this->original_price <= 0) return 0;
-        return round((($this->original_price - $this->deal_price) / $this->original_price) * 100);
+        if ($this->deal_type === 'percentage') {
+            return "{$this->discount_percentage}% OFF";
+        } elseif ($this->deal_type === 'fixed') {
+            return "₹{$this->discount_amount} OFF";
+        } elseif ($this->deal_type === 'free_shipping') {
+            return "Free Shipping";
+        }
+        return "Special Deal";
     }
 
-    public function getSavingsAmountAttribute()
+    public function getRemainingDaysAttribute()
     {
-        return $this->original_price - $this->deal_price;
+        if ($this->end_date) {
+            return max(0, now()->diffInDays($this->end_date, false));
+        }
+        return null;
+    }
+
+    public function getUsagePercentageAttribute()
+    {
+        if ($this->usage_limit > 0) {
+            return round(($this->used_count / $this->usage_limit) * 100, 1);
+        }
+        return 0;
     }
 
     public function getStoreNameAttribute()
     {
-        return $this->store ? $this->store->name : 'Unknown Store';
+        return $this->store->name ?? 'Unknown Store';
     }
 
     public function getCategoryNameAttribute()
     {
-        return $this->category ? $this->category->name : 'Uncategorized';
+        return $this->category->name ?? 'Uncategorized';
     }
 
     public function getImageUrlAttribute()
     {
-        return $this->getFirstMediaUrl('deals', 'medium') ?: asset('images/default-deal.jpg');
+        return $this->getFirstMediaUrl('deals', 'thumb') ?: asset('images/default-deal.jpg');
     }
 
-    public function getThumbnailUrlAttribute()
+    public function getBannerUrlAttribute()
     {
-        return $this->getFirstMediaUrl('deals', 'thumbnail') ?: asset('images/default-deal-thumb.jpg');
+        return $this->getFirstMediaUrl('deals', 'banner') ?: asset('images/default-deal-banner.jpg');
     }
 
-    public function getStatusTextAttribute()
+    public function getFormattedPriceAttribute()
     {
-        if ($this->expired) return 'Expired';
-        if ($this->start_date > now()) return 'Upcoming';
-        return 'Active';
+        return "₹{$this->deal_price}";
     }
 
-    public function getButtonTextAttribute($value)
+    public function getFormattedOriginalPriceAttribute()
     {
-        return $value ?: 'Get Deal';
+        return "₹{$this->original_price}";
+    }
+
+    public function getFormattedDiscountAttribute()
+    {
+        if ($this->deal_type === 'percentage') {
+            return "Save {$this->discount_percentage}%";
+        } elseif ($this->deal_type === 'fixed') {
+            return "Save ₹{$this->discount_amount}";
+        }
+        return "Special Offer";
     }
 
     // Methods
-    public function trackClick($userId = null, $ip = null, $userAgent = null)
+    public function incrementViewCount()
     {
-        return $this->clicks()->create([
-            'user_id' => $userId,
-            'ip_address' => $ip,
-            'user_agent' => $userAgent,
-            'clicked_at' => now()
-        ]);
+        $this->increment('view_count');
     }
 
-    public function trackConversion($userId = null, $orderId = null, $amount = null, $commission = null)
+    public function incrementClickCount()
     {
-        return $this->conversions()->create([
-            'user_id' => $userId,
-            'order_id' => $orderId,
-            'amount' => $amount,
-            'commission' => $commission,
-            'converted_at' => now()
-        ]);
+        $this->increment('click_count');
     }
 
-    public function incrementUsage()
+    public function incrementConversionCount()
     {
+        $this->increment('conversion_count');
+    }
+
+    public function incrementUsedCount()
+    {
+        if (!$this->unlimited_stock && $this->stock_quantity > 0) {
+            $this->decrement('stock_quantity');
+        }
         $this->increment('used_count');
     }
 
-    public function isAvailable()
+    public function updateRating()
     {
-        return $this->is_active && 
-               $this->status === 'active' && 
-               !$this->expired && 
-               ($this->usage_limit === null || $this->used_count < $this->usage_limit);
+        $avgRating = $this->reviews()->avg('rating');
+        $this->update(['rating' => round($avgRating, 1)]);
     }
 
     public function getSlugOptions(): SlugOptions
@@ -280,32 +334,33 @@ class Deal extends Model
             ->useDisk('public');
 
         $this->addMediaCollection('banners')
+            ->singleFile()
             ->useDisk('public');
     }
 
-    // SEO Methods
-    public function getSeoTitle()
+    public function getSeoData()
     {
-        return $this->meta_title ?: $this->title;
+        return [
+            'title' => $this->meta_title ?: $this->title,
+            'description' => $this->meta_description ?: $this->short_description,
+            'keywords' => $this->meta_keywords,
+            'og_image' => $this->og_image ?: $this->image_url,
+            'twitter_image' => $this->twitter_image ?: $this->image_url,
+        ];
     }
 
-    public function getSeoDescription()
+    public function isAvailable()
     {
-        return $this->meta_description ?: Str::limit($this->description, 160);
+        return $this->is_active && 
+               ($this->unlimited_stock || $this->stock_quantity > 0) &&
+               ($this->usage_limit === 0 || $this->used_count < $this->usage_limit);
     }
 
-    public function getSeoKeywords()
+    public function getNextOpeningTime()
     {
-        return $this->meta_keywords ?: implode(', ', $this->tags ?? []);
-    }
-
-    public function getOgImage()
-    {
-        return $this->og_image ?: $this->image_url;
-    }
-
-    public function getTwitterImage()
-    {
-        return $this->twitter_image ?: $this->image_url;
+        if ($this->store) {
+            return $this->store->getNextOpeningTime();
+        }
+        return null;
     }
 }

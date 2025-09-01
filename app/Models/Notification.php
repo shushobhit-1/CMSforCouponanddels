@@ -12,55 +12,40 @@ class Notification extends Model
 
     protected $fillable = [
         'user_id',
+        'type', // system, coupon, deal, product, store, favorite, reminder, etc.
         'title',
         'message',
-        'type', // system, coupon, deal, product, store, favorite, general
         'data', // JSON data for additional information
-        'is_read',
-        'is_sent',
-        'sent_at',
+        'notifiable_type',
+        'notifiable_id',
         'read_at',
-        'scheduled_at',
-        'delivery_method', // email, push, sms, in_app
+        'sent_at',
         'onesignal_id',
-        'email_sent',
-        'push_sent',
-        'sms_sent',
-        'in_app_sent',
+        'onesignal_status',
         'priority', // low, normal, high, urgent
         'category',
         'action_url',
         'action_text',
+        'icon',
+        'color',
         'expires_at',
         'created_by',
-        'status' // pending, sent, failed, cancelled
+        'updated_by',
     ];
 
     protected $casts = [
-        'data' => 'array',
-        'is_read' => 'boolean',
-        'is_sent' => 'boolean',
-        'email_sent' => 'boolean',
-        'push_sent' => 'boolean',
-        'sms_sent' => 'boolean',
-        'in_app_sent' => 'boolean',
-        'sent_at' => 'datetime',
         'read_at' => 'datetime',
-        'scheduled_at' => 'datetime',
+        'sent_at' => 'datetime',
         'expires_at' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'data' => 'array',
+        'priority' => 'string',
     ];
 
     protected $dates = [
-        'sent_at',
         'read_at',
-        'scheduled_at',
+        'sent_at',
         'expires_at',
-        'created_at',
-        'updated_at',
-        'deleted_at'
+        'deleted_at',
     ];
 
     // Relationships
@@ -69,14 +54,19 @@ class Notification extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function notifiable()
+    {
+        return $this->morphTo();
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function notifiable()
+    public function updater()
     {
-        return $this->morphTo();
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     // Scopes
@@ -85,29 +75,34 @@ class Notification extends Model
         return $query->where('user_id', $userId);
     }
 
+    public function scopeByType($query, $type)
+    {
+        return $query->where('type', $type);
+    }
+
+    public function scopeByCategory($query, $category)
+    {
+        return $query->where('category', $category);
+    }
+
     public function scopeUnread($query)
     {
-        return $query->where('is_read', false);
+        return $query->whereNull('read_at');
     }
 
     public function scopeRead($query)
     {
-        return $query->where('is_read', true);
-    }
-
-    public function scopeUnsent($query)
-    {
-        return $query->where('is_sent', false);
+        return $query->whereNotNull('read_at');
     }
 
     public function scopeSent($query)
     {
-        return $query->where('is_sent', true);
+        return $query->whereNotNull('sent_at');
     }
 
-    public function scopeByType($query, $type)
+    public function scopeUnsent($query)
     {
-        return $query->where('type', $type);
+        return $query->whereNull('sent_at');
     }
 
     public function scopeByPriority($query, $priority)
@@ -115,340 +110,350 @@ class Notification extends Model
         return $query->where('priority', $priority);
     }
 
-    public function scopePending($query)
+    public function scopeActive($query)
     {
-        return $query->where('status', 'pending');
-    }
-
-    public function scopeFailed($query)
-    {
-        return $query->where('status', 'failed');
-    }
-
-    public function scopeScheduled($query)
-    {
-        return $query->whereNotNull('scheduled_at')
-                    ->where('scheduled_at', '>', now());
+        return $query->where(function ($q) {
+            $q->whereNull('expires_at')
+              ->orWhere('expires_at', '>', now());
+        });
     }
 
     public function scopeExpired($query)
     {
-        return $query->whereNotNull('expires_at')
-                    ->where('expires_at', '<', now());
+        return $query->where('expires_at', '<', now());
     }
 
-    public function scopeRecent($query, $days = 30)
+    public function scopeRecent($query, $limit = 10)
     {
-        return $query->where('created_at', '>=', now()->subDays($days));
+        return $query->latest()->limit($limit);
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('title', 'like', "%{$search}%")
+              ->orWhere('message', 'like', "%{$search}%");
+        });
     }
 
     // Accessors
+    public function getIsReadAttribute()
+    {
+        return !is_null($this->read_at);
+    }
+
+    public function getIsUnreadAttribute()
+    {
+        return is_null($this->read_at);
+    }
+
+    public function getIsSentAttribute()
+    {
+        return !is_null($this->sent_at);
+    }
+
     public function getIsExpiredAttribute()
     {
         return $this->expires_at && $this->expires_at < now();
     }
 
-    public function getIsScheduledAttribute()
+    public function getIsActiveAttribute()
     {
-        return $this->scheduled_at && $this->scheduled_at > now();
-    }
-
-    public function getIsPendingAttribute()
-    {
-        return $this->status === 'pending' && !$this->is_scheduled;
-    }
-
-    public function getStatusTextAttribute()
-    {
-        if ($this->is_expired) return 'Expired';
-        if ($this->is_scheduled) return 'Scheduled';
-        if ($this->is_sent) return 'Sent';
-        if ($this->status === 'failed') return 'Failed';
-        if ($this->status === 'cancelled') return 'Cancelled';
-        return 'Pending';
-    }
-
-    public function getStatusColorAttribute()
-    {
-        if ($this->is_expired) return 'secondary';
-        if ($this->is_scheduled) return 'info';
-        if ($this->is_sent) return 'success';
-        if ($this->status === 'failed') return 'danger';
-        if ($this->status === 'cancelled') return 'warning';
-        return 'primary';
-    }
-
-    public function getPriorityTextAttribute()
-    {
-        return match($this->priority) {
-            'low' => 'Low',
-            'normal' => 'Normal',
-            'high' => 'High',
-            'urgent' => 'Urgent',
-            default => 'Normal'
-        };
+        return !$this->is_expired;
     }
 
     public function getPriorityColorAttribute()
     {
-        return match($this->priority) {
+        return match ($this->priority) {
             'low' => 'secondary',
-            'normal' => 'primary',
+            'normal' => 'info',
             'high' => 'warning',
             'urgent' => 'danger',
             default => 'primary'
         };
     }
 
-    public function getTypeTextAttribute()
+    public function getPriorityIconAttribute()
     {
-        return match($this->type) {
-            'system' => 'System',
-            'coupon' => 'Coupon',
-            'deal' => 'Deal',
-            'product' => 'Product',
-            'store' => 'Store',
-            'favorite' => 'Favorite',
-            'general' => 'General',
-            default => 'General'
+        return match ($this->priority) {
+            'low' => 'fas fa-info-circle',
+            'normal' => 'fas fa-bell',
+            'high' => 'fas fa-exclamation-triangle',
+            'urgent' => 'fas fa-exclamation-circle',
+            default => 'fas fa-bell'
         };
     }
 
     public function getTypeIconAttribute()
     {
-        return match($this->type) {
-            'system' => 'fas fa-cog',
+        return match ($this->type) {
             'coupon' => 'fas fa-ticket-alt',
             'deal' => 'fas fa-tags',
             'product' => 'fas fa-box',
             'store' => 'fas fa-store',
             'favorite' => 'fas fa-heart',
-            'general' => 'fas fa-bell',
+            'reminder' => 'fas fa-clock',
+            'system' => 'fas fa-cog',
+            'security' => 'fas fa-shield-alt',
+            'update' => 'fas fa-sync-alt',
             default => 'fas fa-bell'
         };
     }
 
-    public function getDeliveryMethodsAttribute()
+    public function getTypeColorAttribute()
     {
-        $methods = [];
-        
-        if ($this->email_sent) $methods[] = 'email';
-        if ($this->push_sent) $methods[] = 'push';
-        if ($this->sms_sent) $methods[] = 'sms';
-        if ($this->in_app_sent) $methods[] = 'in_app';
-        
-        return $methods;
+        return match ($this->type) {
+            'coupon' => 'success',
+            'deal' => 'warning',
+            'product' => 'primary',
+            'store' => 'info',
+            'favorite' => 'danger',
+            'reminder' => 'secondary',
+            'system' => 'dark',
+            'security' => 'danger',
+            'update' => 'info',
+            default => 'primary'
+        };
+    }
+
+    public function getFormattedCreatedAtAttribute()
+    {
+        if ($this->created_at->diffInDays(now()) > 7) {
+            return $this->created_at->format('M j, Y');
+        } elseif ($this->created_at->diffInDays(now()) > 1) {
+            return $this->created_at->diffForHumans();
+        } else {
+            return $this->created_at->diffForHumans();
+        }
+    }
+
+    public function getFormattedReadAtAttribute()
+    {
+        if ($this->read_at) {
+            return $this->read_at->diffForHumans();
+        }
+        return null;
+    }
+
+    public function getFormattedSentAtAttribute()
+    {
+        if ($this->sent_at) {
+            return $this->sent_at->diffForHumans();
+        }
+        return null;
+    }
+
+    public function getFormattedExpiresAtAttribute()
+    {
+        if ($this->expires_at) {
+            if ($this->expires_at->isPast()) {
+                return 'Expired';
+            }
+            return $this->expires_at->diffForHumans();
+        }
+        return null;
+    }
+
+    public function getActionButtonAttribute()
+    {
+        if ($this->action_url && $this->action_text) {
+            return [
+                'url' => $this->action_url,
+                'text' => $this->action_text,
+                'color' => $this->color ?: 'primary',
+            ];
+        }
+        return null;
+    }
+
+    public function getNotificationDataAttribute()
+    {
+        $data = [
+            'id' => $this->id,
+            'type' => $this->type,
+            'title' => $this->title,
+            'message' => $this->message,
+            'priority' => $this->priority,
+            'category' => $this->category,
+            'icon' => $this->icon ?: $this->type_icon,
+            'color' => $this->color ?: $this->type_color,
+            'action_url' => $this->action_url,
+            'action_text' => $this->action_text,
+            'created_at' => $this->formatted_created_at,
+            'is_read' => $this->is_read,
+        ];
+
+        if ($this->data) {
+            $data = array_merge($data, $this->data);
+        }
+
+        return $data;
     }
 
     // Methods
     public function markAsRead()
     {
-        $this->update([
-            'is_read' => true,
-            'read_at' => now()
-        ]);
+        if (!$this->is_read) {
+            $this->update(['read_at' => now()]);
+        }
     }
 
     public function markAsUnread()
     {
-        $this->update([
-            'is_read' => false,
-            'read_at' => null
-        ]);
+        $this->update(['read_at' => null]);
     }
 
     public function markAsSent()
     {
+        if (!$this->is_sent) {
+            $this->update(['sent_at' => now()]);
+        }
+    }
+
+    public function markAsUnsent()
+    {
+        $this->update(['sent_at' => null]);
+    }
+
+    public function updateOneSignalStatus($status, $onesignalId = null)
+    {
         $this->update([
-            'is_sent' => true,
-            'sent_at' => now(),
-            'status' => 'sent'
+            'onesignal_status' => $status,
+            'onesignal_id' => $onesignalId ?: $this->onesignal_id,
         ]);
     }
 
-    public function markAsFailed()
+    public function isExpired()
     {
-        $this->update([
-            'status' => 'failed'
-        ]);
+        return $this->expires_at && $this->expires_at < now();
     }
 
-    public function cancel()
+    public function shouldSend()
     {
-        $this->update([
-            'status' => 'cancelled'
-        ]);
+        return !$this->is_sent && !$this->is_expired;
     }
 
-    public function reschedule($newDate)
+    public function canMarkAsRead()
     {
-        $this->update([
-            'scheduled_at' => $newDate,
-            'status' => 'pending'
-        ]);
+        return $this->is_unread;
     }
 
-    public function extendExpiry($days)
+    public function canMarkAsUnread()
     {
-        $this->update([
-            'expires_at' => now()->addDays($days)
-        ]);
+        return $this->is_read;
     }
 
     // Static Methods
-    public static function createForUser($userId, $title, $message, $type = 'general', $data = [], $options = [])
+    public static function createForUser($userId, $type, $title, $message, $data = [], $options = [])
     {
-        $defaults = [
-            'priority' => 'normal',
-            'delivery_method' => 'in_app',
-            'scheduled_at' => null,
-            'expires_at' => now()->addDays(30),
-            'action_url' => null,
-            'action_text' => null,
-            'category' => null,
-            'created_by' => auth()->id()
-        ];
-
-        $options = array_merge($defaults, $options);
-
-        return static::create([
+        $notification = static::create(array_merge([
             'user_id' => $userId,
+            'type' => $type,
             'title' => $title,
             'message' => $message,
-            'type' => $type,
             'data' => $data,
-            'priority' => $options['priority'],
-            'delivery_method' => $options['delivery_method'],
-            'scheduled_at' => $options['scheduled_at'],
-            'expires_at' => $options['expires_at'],
-            'action_url' => $options['action_url'],
-            'action_text' => $options['action_text'],
-            'category' => $options['category'],
-            'created_by' => $options['created_by'],
-            'status' => $options['scheduled_at'] ? 'pending' : 'pending'
-        ]);
+            'priority' => $options['priority'] ?? 'normal',
+            'category' => $options['category'] ?? 'general',
+            'action_url' => $options['action_url'] ?? null,
+            'action_text' => $options['action_text'] ?? null,
+            'icon' => $options['icon'] ?? null,
+            'color' => $options['color'] ?? null,
+            'expires_at' => $options['expires_at'] ?? null,
+            'created_by' => $options['created_by'] ?? auth()->id(),
+        ], $options));
+
+        return $notification;
     }
 
-    public static function createForMultipleUsers($userIds, $title, $message, $type = 'general', $data = [], $options = [])
+    public static function createForMultipleUsers($userIds, $type, $title, $message, $data = [], $options = [])
     {
         $notifications = [];
         
         foreach ($userIds as $userId) {
-            $notifications[] = static::createForUser($userId, $title, $message, $type, $data, $options);
+            $notifications[] = static::createForUser($userId, $type, $title, $message, $data, $options);
         }
         
         return collect($notifications);
     }
 
-    public static function createForFavoriteStores($userId, $title, $message, $type, $data = [], $options = [])
+    public static function createForAllUsers($type, $title, $message, $data = [], $options = [])
     {
-        $user = User::find($userId);
-        if (!$user) return collect();
-
-        $favoriteStoreIds = $user->favorites()
-                                ->where('favoritable_type', Store::class)
-                                ->pluck('favoritable_id');
-
-        if ($favoriteStoreIds->isEmpty()) return collect();
-
-        return static::createForMultipleUsers(
-            $favoriteStoreIds,
-            $title,
-            $message,
-            $type,
-            $data,
-            $options
-        );
+        $userIds = User::active()->pluck('id');
+        return static::createForMultipleUsers($userIds, $type, $title, $message, $data, $options);
     }
 
-    public static function sendBulkNotifications($notifications)
+    public static function createForFavorites($type, $title, $message, $data = [], $options = [])
     {
-        $results = [
-            'success' => 0,
-            'failed' => 0,
-            'errors' => []
+        $favorites = Favorite::getFavoritesForNotification(null, $type);
+        $userIds = $favorites->pluck('user_id')->unique();
+        
+        return static::createForMultipleUsers($userIds, $type, $title, $message, $data, $options);
+    }
+
+    public static function markAllAsRead($userId)
+    {
+        return static::where('user_id', $userId)
+                    ->whereNull('read_at')
+                    ->update(['read_at' => now()]);
+    }
+
+    public static function deleteExpired()
+    {
+        return static::expired()->delete();
+    }
+
+    public static function getUnreadCount($userId)
+    {
+        return static::where('user_id', $userId)
+                    ->whereNull('read_at')
+                    ->count();
+    }
+
+    public static function getNotificationStats($userId)
+    {
+        $total = static::where('user_id', $userId)->count();
+        $unread = static::where('user_id', $userId)->whereNull('read_at')->count();
+        $read = $total - $unread;
+        
+        $byType = static::where('user_id', $userId)
+                        ->selectRaw('type, COUNT(*) as count')
+                        ->groupBy('type')
+                        ->get()
+                        ->keyBy('type');
+        
+        $byPriority = static::where('user_id', $userId)
+                            ->selectRaw('priority, COUNT(*) as count')
+                            ->groupBy('priority')
+                            ->get()
+                            ->keyBy('priority');
+        
+        return [
+            'total' => $total,
+            'unread' => $unread,
+            'read' => $read,
+            'by_type' => $byType,
+            'by_priority' => $byPriority,
         ];
+    }
 
-        foreach ($notifications as $notification) {
-            try {
-                // Send via OneSignal
-                if ($notification->delivery_method === 'push' || $notification->delivery_method === 'all') {
-                    $notification->sendPushNotification();
-                }
-
-                // Send via email
-                if ($notification->delivery_method === 'email' || $notification->delivery_method === 'all') {
-                    $notification->sendEmailNotification();
-                }
-
-                // Send via SMS
-                if ($notification->delivery_method === 'sms' || $notification->delivery_method === 'all') {
-                    $notification->sendSmsNotification();
-                }
-
-                $notification->markAsSent();
-                $results['success']++;
-
-            } catch (\Exception $e) {
-                $notification->markAsFailed();
-                $results['failed']++;
-                $results['errors'][] = [
-                    'notification_id' => $notification->id,
-                    'error' => $e->getMessage()
-                ];
-            }
+    public static function sendOneSignalNotification($notification)
+    {
+        // This would integrate with OneSignal API
+        // Implementation depends on OneSignal configuration
+        try {
+            // OneSignal API call would go here
+            $notification->updateOneSignalStatus('sent');
+            return true;
+        } catch (\Exception $e) {
+            $notification->updateOneSignalStatus('failed');
+            return false;
         }
-
-        return $results;
     }
 
-    // OneSignal Integration Methods
-    public function sendPushNotification()
+    public static function cleanupOldNotifications($days = 90)
     {
-        if (!$this->user || !$this->user->onesignal_player_id) {
-            throw new \Exception('User has no OneSignal player ID');
-        }
-
-        // Implementation for OneSignal push notification
-        // This would integrate with the OneSignal API
-        
-        $this->update(['push_sent' => true]);
-    }
-
-    public function sendEmailNotification()
-    {
-        // Implementation for email notification
-        // This would use Laravel's mail system
-        
-        $this->update(['email_sent' => true]);
-    }
-
-    public function sendSmsNotification()
-    {
-        // Implementation for SMS notification
-        // This would integrate with an SMS service provider
-        
-        $this->update(['sms_sent' => true]);
-    }
-
-    // Events
-    protected static function booted()
-    {
-        static::created(function ($notification) {
-            // Log activity
-            activity()
-                ->performedOn($notification)
-                ->causedBy($notification->creator)
-                ->log('created notification');
-        });
-
-        static::updated(function ($notification) {
-            if ($notification->wasChanged('is_read')) {
-                activity()
-                    ->performedOn($notification)
-                    ->causedBy($notification->user)
-                    ->log($notification->is_read ? 'read notification' : 'marked notification as unread');
-            }
-        });
+        return static::where('created_at', '<', now()->subDays($days))
+                    ->where('is_read', true)
+                    ->delete();
     }
 }

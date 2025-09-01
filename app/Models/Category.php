@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
-use Illuminate\Support\Str;
 
-class Category extends Model
+class Category extends Model implements HasMedia
 {
     use HasFactory, SoftDeletes, InteractsWithMedia, HasSlug;
 
@@ -20,45 +20,48 @@ class Category extends Model
         'description',
         'short_description',
         'parent_id',
+        'level',
+        'order',
+        'status', // active, inactive, featured
+        'featured',
+        'popular',
         'icon',
+        'icon_class',
         'color',
-        'is_featured',
-        'is_active',
-        'sort_order',
+        'background_color',
         'meta_title',
         'meta_description',
         'meta_keywords',
         'og_image',
         'twitter_image',
-        'created_by',
-        'status', // active, inactive, draft
         'banner_text',
-        'banner_color',
+        'banner_button_text',
+        'banner_button_link',
         'show_in_menu',
         'show_in_footer',
         'show_in_homepage',
-        'seo_score',
-        'page_speed_score'
+        'show_in_sidebar',
+        'created_by',
+        'updated_by',
+        'published_at',
     ];
 
     protected $casts = [
-        'is_featured' => 'boolean',
-        'is_active' => 'boolean',
+        'published_at' => 'datetime',
+        'featured' => 'boolean',
+        'popular' => 'boolean',
         'show_in_menu' => 'boolean',
         'show_in_footer' => 'boolean',
         'show_in_homepage' => 'boolean',
-        'sort_order' => 'integer',
-        'seo_score' => 'integer',
-        'page_speed_score' => 'integer',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'show_in_sidebar' => 'boolean',
+        'level' => 'integer',
+        'order' => 'integer',
+        'parent_id' => 'integer',
     ];
 
     protected $dates = [
-        'created_at',
-        'updated_at',
-        'deleted_at'
+        'published_at',
+        'deleted_at',
     ];
 
     // Relationships
@@ -77,14 +80,16 @@ class Category extends Model
         return $this->children()->with('allChildren');
     }
 
-    public function descendants()
-    {
-        return $this->children()->with('descendants');
-    }
-
     public function ancestors()
     {
-        return $this->parent()->with('ancestors');
+        return $this->parent ? $this->parent->ancestors()->push($this->parent) : collect();
+    }
+
+    public function descendants()
+    {
+        return $this->children->map(function ($child) {
+            return $child->descendants()->push($child);
+        })->flatten();
     }
 
     public function coupons()
@@ -112,16 +117,30 @@ class Category extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function menuItems()
+    {
+        return $this->morphMany(MenuItem::class, 'linkable');
+    }
+
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
-                    ->where('status', 'active');
+        return $query->where('status', 'active');
     }
 
     public function scopeFeatured($query)
     {
-        return $query->where('is_featured', true);
+        return $query->where('featured', true);
+    }
+
+    public function scopePopular($query)
+    {
+        return $query->where('popular', true);
     }
 
     public function scopeRoot($query)
@@ -129,38 +148,48 @@ class Category extends Model
         return $query->whereNull('parent_id');
     }
 
+    public function scopeByLevel($query, $level)
+    {
+        return $query->where('level', $level);
+    }
+
     public function scopeByParent($query, $parentId)
     {
         return $query->where('parent_id', $parentId);
     }
 
-    public function scopeMenuVisible($query)
+    public function scopeInMenu($query)
     {
         return $query->where('show_in_menu', true);
     }
 
-    public function scopeFooterVisible($query)
+    public function scopeInFooter($query)
     {
         return $query->where('show_in_footer', true);
     }
 
-    public function scopeHomepageVisible($query)
+    public function scopeInHomepage($query)
     {
         return $query->where('show_in_homepage', true);
     }
 
-    public function scopeSearch($query, $search)
+    public function scopeInSidebar($query)
     {
-        return $query->where(function($q) use ($search) {
-            $q->where('name', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%");
-        });
+        return $query->where('show_in_sidebar', true);
     }
 
     public function scopeOrdered($query)
     {
-        return $query->orderBy('sort_order', 'asc')
-                    ->orderBy('name', 'asc');
+        return $query->orderBy('order', 'asc');
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%")
+              ->orWhere('short_description', 'like', "%{$search}%");
+        });
     }
 
     // Accessors
@@ -169,60 +198,73 @@ class Category extends Model
         return is_null($this->parent_id);
     }
 
-    public function getIsChildAttribute()
+    public function getIsLeafAttribute()
     {
-        return !is_null($this->parent_id);
+        return $this->children->isEmpty();
     }
 
-    public function getHasChildrenAttribute()
+    public function getDepthAttribute()
     {
-        return $this->children()->exists();
+        return $this->level;
     }
 
-    public function getLevelAttribute()
+    public function getFullPathAttribute()
     {
-        if ($this->is_root) return 0;
-        return $this->parent ? $this->parent->level + 1 : 1;
-    }
-
-    public function getBreadcrumbAttribute()
-    {
-        $breadcrumb = collect([$this]);
+        $path = collect([$this->name]);
         $parent = $this->parent;
         
         while ($parent) {
-            $breadcrumb->prepend($parent);
+            $path->prepend($parent->name);
             $parent = $parent->parent;
         }
         
-        return $breadcrumb;
+        return $path->implode(' > ');
     }
 
-    public function getBreadcrumbTextAttribute()
+    public function getBreadcrumbsAttribute()
     {
-        return $this->breadcrumb->pluck('name')->implode(' > ');
+        $breadcrumbs = collect([$this]);
+        $parent = $this->parent;
+        
+        while ($parent) {
+            $breadcrumbs->prepend($parent);
+            $parent = $parent->parent;
+        }
+        
+        return $breadcrumbs;
     }
 
     public function getImageUrlAttribute()
     {
-        return $this->getFirstMediaUrl('categories', 'medium') ?: asset('images/default-category.jpg');
+        return $this->getFirstMediaUrl('categories', 'thumb') ?: asset('images/default-category.jpg');
     }
 
-    public function getThumbnailUrlAttribute()
+    public function getBannerUrlAttribute()
     {
-        return $this->getFirstMediaUrl('categories', 'thumbnail') ?: asset('images/default-category-thumb.jpg');
+        return $this->getFirstMediaUrl('categories', 'banner') ?: asset('images/default-category-banner.jpg');
     }
 
     public function getIconUrlAttribute()
     {
-        return $this->icon ?: 'fas fa-folder';
+        if ($this->icon) {
+            return $this->getFirstMediaUrl('icons') ?: asset('images/default-icon.png');
+        }
+        return null;
+    }
+
+    public function getFormattedColorAttribute()
+    {
+        return $this->color ?: '#007bff';
+    }
+
+    public function getFormattedBackgroundColorAttribute()
+    {
+        return $this->background_color ?: '#f8f9fa';
     }
 
     public function getContentCountAttribute()
     {
-        return $this->coupons()->count() + 
-               $this->deals()->count() + 
-               $this->products()->count();
+        return $this->coupons()->count() + $this->deals()->count() + $this->products()->count();
     }
 
     public function getActiveContentCountAttribute()
@@ -232,17 +274,110 @@ class Category extends Model
                $this->products()->active()->count();
     }
 
-    public function getStatusTextAttribute()
+    public function getStoreCountAttribute()
     {
-        return match($this->status) {
-            'active' => 'Active',
-            'inactive' => 'Inactive',
-            'draft' => 'Draft',
-            default => 'Unknown'
-        };
+        return $this->stores()->count();
+    }
+
+    public function getActiveStoreCountAttribute()
+    {
+        return $this->stores()->active()->count();
+    }
+
+    public function getHasChildrenAttribute()
+    {
+        return $this->children->isNotEmpty();
+    }
+
+    public function getChildrenCountAttribute()
+    {
+        return $this->children->count();
+    }
+
+    public function getSiblingsAttribute()
+    {
+        if ($this->parent_id) {
+            return static::where('parent_id', $this->parent_id)
+                        ->where('id', '!=', $this->id)
+                        ->where('status', 'active')
+                        ->ordered()
+                        ->get();
+        }
+        return collect();
+    }
+
+    public function getSiblingsCountAttribute()
+    {
+        if ($this->parent_id) {
+            return static::where('parent_id', $this->parent_id)
+                        ->where('id', '!=', $this->id)
+                        ->where('status', 'active')
+                        ->count();
+        }
+        return 0;
     }
 
     // Methods
+    public function updateLevel()
+    {
+        if ($this->parent_id) {
+            $this->level = $this->parent->level + 1;
+        } else {
+            $this->level = 0;
+        }
+        $this->save();
+        
+        // Update children levels
+        foreach ($this->children as $child) {
+            $child->updateLevel();
+        }
+    }
+
+    public function moveTo($newParentId)
+    {
+        $oldParentId = $this->parent_id;
+        $this->parent_id = $newParentId;
+        $this->save();
+        
+        $this->updateLevel();
+        
+        // Update old parent's children count if needed
+        if ($oldParentId) {
+            $oldParent = static::find($oldParentId);
+            if ($oldParent) {
+                $oldParent->updateChildrenCount();
+            }
+        }
+        
+        // Update new parent's children count
+        if ($newParentId) {
+            $newParent = static::find($newParentId);
+            if ($newParent) {
+                $newParent->updateChildrenCount();
+            }
+        }
+    }
+
+    public function updateChildrenCount()
+    {
+        $this->children_count = $this->children()->count();
+        $this->save();
+    }
+
+    public function getRootCategory()
+    {
+        if ($this->is_root) {
+            return $this;
+        }
+        
+        $parent = $this->parent;
+        while ($parent && !$parent->is_root) {
+            $parent = $parent->parent;
+        }
+        
+        return $parent ?: $this;
+    }
+
     public function getAllDescendants()
     {
         $descendants = collect();
@@ -268,24 +403,15 @@ class Category extends Model
         return $ancestors;
     }
 
-    public function getPath()
+    public function getSeoData()
     {
-        return $this->ancestors->pluck('slug')->push($this->slug)->implode('/');
-    }
-
-    public function getFullPath()
-    {
-        return '/categories/' . $this->getPath();
-    }
-
-    public function isDescendantOf($category)
-    {
-        return $this->getAllAncestors()->contains($category);
-    }
-
-    public function isAncestorOf($category)
-    {
-        return $category->isDescendantOf($this);
+        return [
+            'title' => $this->meta_title ?: $this->name,
+            'description' => $this->meta_description ?: $this->description,
+            'keywords' => $this->meta_keywords,
+            'og_image' => $this->og_image ?: $this->image_url,
+            'twitter_image' => $this->twitter_image ?: $this->image_url,
+        ];
     }
 
     public function getSlugOptions(): SlugOptions
@@ -303,81 +429,53 @@ class Category extends Model
             ->useDisk('public');
 
         $this->addMediaCollection('banners')
+            ->singleFile()
+            ->useDisk('public');
+
+        $this->addMediaCollection('icons')
+            ->singleFile()
             ->useDisk('public');
     }
 
-    // SEO Methods
-    public function getSeoTitle()
-    {
-        return $this->meta_title ?: $this->name;
-    }
-
-    public function getSeoDescription()
-    {
-        return $this->meta_description ?: Str::limit($this->description, 160);
-    }
-
-    public function getSeoKeywords()
-    {
-        return $this->meta_keywords ?: $this->name;
-    }
-
-    public function getOgImage()
-    {
-        return $this->og_image ?: $this->image_url;
-    }
-
-    public function getTwitterImage()
-    {
-        return $this->twitter_image ?: $this->image_url;
-    }
-
-    // Performance Methods
-    public function calculateSeoScore()
-    {
-        $score = 0;
-        
-        if ($this->meta_title) $score += 20;
-        if ($this->meta_description) $score += 20;
-        if ($this->meta_keywords) $score += 15;
-        if ($this->description && strlen($this->description) > 100) $score += 15;
-        if ($this->image_url) $score += 10;
-        if ($this->icon) $score += 10;
-        if ($this->color) $score += 5;
-        if ($this->banner_text) $score += 5;
-        
-        $this->update(['seo_score' => $score]);
-        return $score;
-    }
-
-    // Menu Methods
     public function getMenuData()
     {
         return [
             'id' => $this->id,
             'name' => $this->name,
             'slug' => $this->slug,
-            'url' => $this->getFullPath(),
-            'icon' => $this->icon_url,
+            'url' => route('categories.show', $this->slug),
+            'icon' => $this->icon_class,
             'color' => $this->color,
-            'children' => $this->children->active()->menuVisible()->ordered()->get()->map(function($child) {
+            'children' => $this->children->active()->ordered()->map(function ($child) {
                 return $child->getMenuData();
-            })
+            }),
         ];
     }
 
-    // Statistics Methods
-    public function getStatistics()
+    public function getFeaturedContent($limit = 6)
     {
-        return [
-            'total_coupons' => $this->coupons()->count(),
-            'active_coupons' => $this->coupons()->active()->count(),
-            'total_deals' => $this->deals()->count(),
-            'active_deals' => $this->deals()->active()->count(),
-            'total_products' => $this->products()->count(),
-            'active_products' => $this->products()->active()->count(),
-            'total_stores' => $this->stores()->count(),
-            'featured_stores' => $this->stores()->where('is_featured', true)->count()
-        ];
+        $coupons = $this->coupons()->featured()->active()->limit($limit)->get();
+        $deals = $this->deals()->featured()->active()->limit($limit)->get();
+        $products = $this->products()->featured()->active()->limit($limit)->get();
+        
+        return collect([$coupons, $deals, $products])->flatten()->take($limit);
+    }
+
+    public function getPopularContent($limit = 6)
+    {
+        $coupons = $this->coupons()->popular()->active()->limit($limit)->get();
+        $deals = $this->deals()->popular()->active()->limit($limit)->get();
+        $products = $this->products()->popular()->active()->limit($limit)->get();
+        
+        return collect([$coupons, $deals, $products])->flatten()->take($limit);
+    }
+
+    public function getRecentContent($limit = 6)
+    {
+        $coupons = $this->coupons()->active()->latest()->limit($limit)->get();
+        $deals = $this->deals()->active()->latest()->limit($limit)->get();
+        $products = $this->products()->active()->latest()->limit($limit)->get();
+        
+        return collect([$coupons, $deals, $products])->flatten()->take($limit);
     }
 }
