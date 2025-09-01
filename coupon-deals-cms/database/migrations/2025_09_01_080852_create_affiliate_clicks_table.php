@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('affiliate_clicks', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('affiliate_url');
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->text('referrer')->nullable();
+            $table->timestamp('clicked_at')->useCurrent();
             $table->timestamps();
         });
     }

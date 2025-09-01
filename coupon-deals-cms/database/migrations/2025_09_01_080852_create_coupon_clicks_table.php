@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('coupon_clicks', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('coupon_id')->constrained('coupons')->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->text('referrer')->nullable();
+            $table->timestamp('clicked_at')->useCurrent();
             $table->timestamps();
         });
     }
