@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\CouponPublicController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +19,10 @@ use App\Http\Controllers\Admin\DashboardController;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Public coupons
+Route::get('/coupons', [CouponPublicController::class, 'index'])->name('coupons.index');
+Route::get('/coupons/{coupon:slug}', [CouponPublicController::class, 'show'])->name('coupons.show');
 
 // Auth protected dashboard (user)
 Route::middleware(['auth', 'verified'])->group(function () {
