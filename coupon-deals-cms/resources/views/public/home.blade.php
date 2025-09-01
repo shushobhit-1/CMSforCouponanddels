@@ -4,7 +4,48 @@
 @section('meta_description', 'Discover exclusive coupons, hot deals, and affiliate products from top stores. Save money with verified discount codes and promotional offers.')
 
 @section('content')
-<!-- Hero Section with Particles Background -->
+<!-- Hero Section with Slider (if available) or Particles Background -->
+@if($homeSlider && is_array($homeSlider->slides) && count($homeSlider->slides))
+<section class="position-relative overflow-hidden">
+    <div id="homeCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            @foreach($homeSlider->slides as $i => $slide)
+            <div class="carousel-item {{ $i === 0 ? 'active' : '' }}">
+                @if(!empty($slide['image']))
+                    <img src="{{ $slide['image'] }}" class="d-block w-100" alt="{{ $slide['title'] ?? 'Slide' }}" style="height: 60vh; object-fit: cover;">
+                @else
+                    <div class="d-block w-100 bg-light" style="height: 60vh;"></div>
+                @endif
+                <div class="carousel-caption d-none d-md-block text-start">
+                    @if(!empty($slide['title']))
+                        <h5 class="fw-bold">{{ $slide['title'] }}</h5>
+                    @endif
+                    @if(!empty($slide['subtitle']))
+                        <p>{{ $slide['subtitle'] }}</p>
+                    @endif
+                    @if(!empty($slide['cta_url']) && !empty($slide['cta_label']))
+                        <a href="{{ $slide['cta_url'] }}" class="btn btn-primary btn-lg">{{ $slide['cta_label'] }}</a>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#homeCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#homeCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+        <div class="carousel-indicators">
+            @foreach($homeSlider->slides as $i => $slide)
+                <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="{{ $i }}" class="{{ $i===0 ? 'active' : '' }}" aria-current="{{ $i===0 ? 'true' : 'false' }}" aria-label="Slide {{ $i+1 }}"></button>
+            @endforeach
+        </div>
+    </div>
+</section>
+@else
 <section class="hero-section position-relative overflow-hidden" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); min-height: 90vh;">
     <div id="particles-js" class="position-absolute w-100 h-100"></div>
     <div class="container position-relative" style="z-index: 2;">
@@ -90,6 +131,7 @@
         </div>
     </div>
 </section>
+@endif
 
 <!-- Search Section -->
 <section class="py-4 bg-light border-bottom">

@@ -7,6 +7,7 @@ use App\Models\Deal;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Category;
+use App\Models\Slider;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -53,13 +54,16 @@ class HomeController extends Controller
             'money_saved' => 50000, // This would be calculated from actual savings
         ];
         
+        $homeSlider = Slider::where('slug', 'home-hero')->where('is_active', true)->first();
+
         return view('public.home', compact(
             'featuredCoupons',
             'featuredDeals', 
             'featuredProducts',
             'popularStores',
             'categories',
-            'stats'
+            'stats',
+            'homeSlider'
         ));
     }
 }
