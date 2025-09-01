@@ -1,406 +1,323 @@
-<!-- Coupon Popup Modal -->
-<div class="coupon-popup" id="couponPopup" style="display: none;">
+@props([
+    'coupon' => null,
+    'show' => false,
+    'position' => 'center',
+    'animation' => 'fadeIn',
+    'delay' => 0,
+    'style' => 'default'
+])
+
+@if($coupon)
+<div id="coupon-popup-{{ $coupon->id }}" 
+     class="coupon-popup {{ $show ? 'show' : '' }} position-{{ $position }} style-{{ $style }}"
+     data-animation="{{ $animation }}"
+     data-delay="{{ $delay }}"
+     style="display: {{ $show ? 'block' : 'none' }};">
+    
+    <div class="coupon-popup-overlay" onclick="closeCouponPopup({{ $coupon->id }})"></div>
+    
     <div class="coupon-popup-content">
         <!-- Close Button -->
-        <button class="coupon-popup-close" onclick="closeCouponPopup()">
+        <button class="coupon-popup-close" onclick="closeCouponPopup({{ $coupon->id }})">
             <i class="fas fa-times"></i>
         </button>
         
-        <!-- Popup Header -->
+        <!-- Coupon Header -->
         <div class="coupon-popup-header">
-            <h3 class="coupon-popup-title" id="popupTitle"></h3>
-            <p class="coupon-popup-store" id="popupStore"></p>
+            <div class="store-logo">
+                @if($coupon->store && $coupon->store->logo_url)
+                    <img src="{{ $coupon->store->logo_url }}" alt="{{ $coupon->store->name }}" class="store-logo-img">
+                @else
+                    <div class="store-logo-placeholder">
+                        <i class="fas fa-store"></i>
+                    </div>
+                @endif
+            </div>
+            
+            <div class="coupon-info">
+                <h3 class="coupon-title">{{ $coupon->title }}</h3>
+                <p class="store-name">{{ $coupon->store->name ?? 'Unknown Store' }}</p>
+                <div class="coupon-meta">
+                    @if($coupon->discount_percentage)
+                        <span class="discount-badge">{{ $coupon->discount_percentage }}% OFF</span>
+                    @endif
+                    @if($coupon->discount_amount)
+                        <span class="discount-badge">₹{{ $coupon->discount_amount }} OFF</span>
+                    @endif
+                    @if($coupon->end_date)
+                        <span class="expiry-badge">
+                            <i class="fas fa-clock"></i>
+                            Expires in {{ $coupon->remaining_days }} days
+                        </span>
+                    @endif
+                </div>
+            </div>
         </div>
         
-        <!-- Coupon Code (Hidden by default) -->
-        <div class="coupon-popup-code hidden" id="popupCode">
-            <span id="couponCodeText"></span>
+        <!-- Coupon Code Section -->
+        <div class="coupon-code-section">
+            <div class="coupon-code-display" id="coupon-code-{{ $coupon->id }}">
+                <span class="code-placeholder">Click to reveal code</span>
+                <span class="actual-code" style="display: none;">{{ $coupon->code }}</span>
+            </div>
+            
+            <button class="reveal-code-btn" onclick="revealCouponCode({{ $coupon->id }})">
+                <i class="fas fa-eye"></i>
+                <span>Reveal Code</span>
+            </button>
         </div>
+        
+        <!-- Coupon Description -->
+        @if($coupon->description)
+        <div class="coupon-description">
+            <p>{{ $coupon->description }}</p>
+        </div>
+        @endif
+        
+        <!-- Terms and Conditions -->
+        @if($coupon->terms_conditions)
+        <div class="coupon-terms">
+            <details>
+                <summary>Terms & Conditions</summary>
+                <div class="terms-content">
+                    {!! nl2br(e($coupon->terms_conditions)) !!}
+                </div>
+            </details>
+        </div>
+        @endif
         
         <!-- Action Buttons -->
-        <div class="coupon-popup-actions">
-            <button class="coupon-popup-btn primary" onclick="revealCouponCode()" id="revealBtn">
-                <i class="fas fa-eye"></i>
-                Reveal Code
-            </button>
-            
-            <a href="#" class="coupon-popup-btn secondary" id="getDealBtn" target="_blank" onclick="trackCouponClick()">
+        <div class="coupon-actions">
+            <a href="{{ $coupon->affiliate_link }}" 
+               class="btn btn-primary get-deal-btn"
+               onclick="trackCouponClick({{ $coupon->id }})"
+               target="_blank"
+               rel="noopener noreferrer">
                 <i class="fas fa-external-link-alt"></i>
                 Get Deal
             </a>
             
-            <button class="coupon-popup-btn outline" onclick="copyCouponCode()" id="copyBtn" style="display: none;">
+            <button class="btn btn-outline-secondary copy-code-btn" 
+                    onclick="copyCouponCode({{ $coupon->id }})"
+                    style="display: none;"
+                    id="copy-btn-{{ $coupon->id }}">
                 <i class="fas fa-copy"></i>
                 Copy Code
             </button>
         </div>
         
-        <!-- Upvote and Like System -->
-        <div class="vote-system">
-            <button class="vote-btn" id="upvoteBtn" onclick="voteCoupon('upvote')">
-                <i class="fas fa-thumbs-up vote-icon"></i>
-                <span class="vote-count" id="upvoteCount">0</span>
-            </button>
-            
-            <button class="vote-btn" id="downvoteBtn" onclick="voteCoupon('downvote')">
-                <i class="fas fa-thumbs-down vote-icon"></i>
-                <span class="vote-count" id="downvoteCount">0</span>
-            </button>
-            
-            <button class="vote-btn" id="likeBtn" onclick="voteCoupon('like')">
-                <i class="fas fa-heart vote-icon"></i>
-                <span class="vote-count" id="likeCount">0</span>
-            </button>
-            
-            <button class="vote-btn" id="dislikeBtn" onclick="voteCoupon('dislike')">
-                <i class="fas fa-heart-broken vote-icon"></i>
-                <span class="vote-count" id="dislikeCount">0</span>
-            </button>
-        </div>
-        
-        <!-- Share Icons -->
-        <div class="coupon-share-icons">
-            <h6>Share This Coupon</h6>
-            <div class="coupon-share-buttons">
-                <a href="#" class="share-btn facebook" onclick="shareCoupon('facebook')" title="Share on Facebook">
+        <!-- Share Section -->
+        <div class="coupon-share-section">
+            <h4>Share this deal</h4>
+            <div class="share-icons">
+                <!-- Facebook -->
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(request()->url()) }}&quote={{ urlencode($coupon->title) }}" 
+                   class="share-icon facebook"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   onclick="trackShare('facebook', {{ $coupon->id }})">
                     <i class="fab fa-facebook-f"></i>
                 </a>
                 
-                <a href="#" class="share-btn twitter" onclick="shareCoupon('twitter')" title="Share on Twitter">
+                <!-- Twitter -->
+                <a href="https://twitter.com/intent/tweet?text={{ urlencode($coupon->title) }}&url={{ urlencode(request()->url()) }}" 
+                   class="share-icon twitter"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   onclick="trackShare('twitter', {{ $coupon->id }})">
                     <i class="fab fa-twitter"></i>
                 </a>
                 
-                <a href="#" class="share-btn whatsapp" onclick="shareCoupon('whatsapp')" title="Share on WhatsApp">
+                <!-- WhatsApp -->
+                <a href="https://wa.me/?text={{ urlencode($coupon->title . ' ' . request()->url()) }}" 
+                   class="share-icon whatsapp"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   onclick="trackShare('whatsapp', {{ $coupon->id }})">
                     <i class="fab fa-whatsapp"></i>
                 </a>
                 
-                <a href="#" class="share-btn telegram" onclick="shareCoupon('telegram')" title="Share on Telegram">
+                <!-- Telegram -->
+                <a href="https://t.me/share/url?url={{ urlencode(request()->url()) }}&text={{ urlencode($coupon->title) }}" 
+                   class="share-icon telegram"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   onclick="trackShare('telegram', {{ $coupon->id }})">
                     <i class="fab fa-telegram-plane"></i>
                 </a>
                 
-                <a href="#" class="share-btn email" onclick="shareCoupon('email')" title="Share via Email">
+                <!-- Email -->
+                <a href="mailto:?subject={{ urlencode($coupon->title) }}&body={{ urlencode('Check out this amazing deal: ' . request()->url()) }}" 
+                   class="share-icon email"
+                   onclick="trackShare('email', {{ $coupon->id }})">
                     <i class="fas fa-envelope"></i>
                 </a>
                 
-                <button class="share-btn copy" onclick="copyCouponLink()" title="Copy Link">
+                <!-- Copy Link -->
+                <button class="share-icon copy-link"
+                        onclick="copyShareLink({{ $coupon->id }})"
+                        title="Copy link">
                     <i class="fas fa-link"></i>
                 </button>
             </div>
         </div>
         
-        <!-- Coupon Details -->
-        <div class="coupon-details mt-3">
-            <div class="row text-center">
-                <div class="col-6">
-                    <small class="text-muted">Expires</small>
-                    <p class="mb-0 fw-bold" id="popupExpiry"></p>
-                </div>
-                <div class="col-6">
-                    <small class="text-muted">Used</small>
-                    <p class="mb-0 fw-bold" id="popupUsage"></p>
-                </div>
-            </div>
+        <!-- Footer -->
+        <div class="coupon-popup-footer">
+            <p class="powered-by">
+                Powered by <strong>{{ config('app.name', 'Coupon Deals CMS') }}</strong>
+            </p>
         </div>
     </div>
 </div>
 
+<!-- JavaScript for Coupon Popup -->
 <script>
-let currentCoupon = null;
-let couponRevealed = false;
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize popup with delay if specified
+    const popup = document.getElementById('coupon-popup-{{ $coupon->id }}');
+    const delay = {{ $delay }};
+    
+    if (delay > 0) {
+        setTimeout(() => {
+            showCouponPopup({{ $coupon->id }});
+        }, delay * 1000);
+    }
+});
 
-// Function to open coupon popup
-function openCouponPopup(coupon) {
-    currentCoupon = coupon;
-    couponRevealed = false;
+function showCouponPopup(couponId) {
+    const popup = document.getElementById(`coupon-popup-${couponId}`);
+    const animation = popup.dataset.animation;
     
-    // Populate popup content
-    document.getElementById('popupTitle').textContent = coupon.title;
-    document.getElementById('popupStore').textContent = coupon.store_name;
-    document.getElementById('couponCodeText').textContent = coupon.code;
-    document.getElementById('popupExpiry').textContent = coupon.end_date ? new Date(coupon.end_date).toLocaleDateString() : 'No expiry';
-    document.getElementById('popupUsage').textContent = `${coupon.used_count || 0}/${coupon.usage_limit || '∞'}`;
+    popup.style.display = 'block';
     
-    // Set affiliate link
-    const getDealBtn = document.getElementById('getDealBtn');
-    getDealBtn.href = coupon.affiliate_link || '#';
-    
-    // Reset popup state
-    document.getElementById('popupCode').classList.add('hidden');
-    document.getElementById('popupCode').classList.remove('revealed');
-    document.getElementById('revealBtn').style.display = 'inline-flex';
-    document.getElementById('copyBtn').style.display = 'none';
-    
-    // Update vote counts
-    updateVoteCounts(coupon);
-    
-    // Show popup
-    document.getElementById('couponPopup').style.display = 'flex';
+    // Add animation class
     setTimeout(() => {
-        document.getElementById('couponPopup').classList.add('show');
+        popup.classList.add('show', `animate-${animation}`);
     }, 10);
     
     // Track popup view
-    trackCouponPopupView(coupon.id);
+    trackCouponPopupView(couponId);
 }
 
-// Function to close coupon popup
-function closeCouponPopup() {
-    document.getElementById('couponPopup').classList.remove('show');
+function closeCouponPopup(couponId) {
+    const popup = document.getElementById(`coupon-popup-${couponId}`);
+    popup.classList.remove('show');
+    
     setTimeout(() => {
-        document.getElementById('couponPopup').style.display = 'none';
+        popup.style.display = 'none';
     }, 300);
-    
-    currentCoupon = null;
-    couponRevealed = false;
 }
 
-// Function to reveal coupon code
-function revealCouponCode() {
-    if (!currentCoupon) return;
+function revealCouponCode(couponId) {
+    const codeDisplay = document.getElementById(`coupon-code-${couponId}`);
+    const placeholder = codeDisplay.querySelector('.code-placeholder');
+    const actualCode = codeDisplay.querySelector('.actual-code');
+    const revealBtn = event.target.closest('.reveal-code-btn');
+    const copyBtn = document.getElementById(`copy-btn-${couponId}`);
     
-    const codeElement = document.getElementById('popupCode');
-    const revealBtn = document.getElementById('revealBtn');
-    const copyBtn = document.getElementById('copyBtn');
+    // Hide placeholder and show actual code
+    placeholder.style.display = 'none';
+    actualCode.style.display = 'inline';
     
-    // Reveal the code
-    codeElement.classList.remove('hidden');
-    codeElement.classList.add('revealed');
+    // Change button text
+    revealBtn.innerHTML = '<i class="fas fa-check"></i><span>Code Revealed</span>';
+    revealBtn.classList.add('revealed');
     
-    // Hide reveal button and show copy button
-    revealBtn.style.display = 'none';
-    copyBtn.style.display = 'inline-flex';
+    // Show copy button
+    copyBtn.style.display = 'inline-block';
     
-    couponRevealed = true;
-    
-    // Track code reveal
-    trackCouponCodeReveal(currentCoupon.id);
+    // Track code revelation
+    trackCouponCodeReveal(couponId);
 }
 
-// Function to copy coupon code
-function copyCouponCode() {
-    if (!currentCoupon) return;
+function copyCouponCode(couponId) {
+    const codeElement = document.getElementById(`coupon-code-${couponId}`);
+    const code = codeElement.querySelector('.actual-code').textContent;
     
-    navigator.clipboard.writeText(currentCoupon.code).then(() => {
-        // Show success message
-        const copyBtn = document.getElementById('copyBtn');
+    navigator.clipboard.writeText(code).then(() => {
+        const copyBtn = document.getElementById(`copy-btn-${couponId}`);
         const originalText = copyBtn.innerHTML;
         
-        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        copyBtn.classList.add('btn-success');
+        copyBtn.innerHTML = '<i class="fas fa-check"></i><span>Copied!</span>';
+        copyBtn.classList.add('copied');
         
         setTimeout(() => {
             copyBtn.innerHTML = originalText;
-            copyBtn.classList.remove('btn-success');
+            copyBtn.classList.remove('copied');
         }, 2000);
         
         // Track code copy
-        trackCouponCodeCopy(currentCoupon.id);
-    }).catch(err => {
-        console.error('Failed to copy: ', err);
-        alert('Failed to copy coupon code');
+        trackCouponCodeCopy(couponId);
     });
 }
 
-// Function to copy coupon link
-function copyCouponLink() {
-    const currentUrl = window.location.href;
-    
-    navigator.clipboard.writeText(currentUrl).then(() => {
-        // Show success message
-        const copyBtn = document.querySelector('.share-btn.copy');
-        const originalIcon = copyBtn.innerHTML;
+function copyShareLink(couponId) {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        const copyLinkBtn = event.target.closest('.copy-link');
+        const originalIcon = copyLinkBtn.innerHTML;
         
-        copyBtn.innerHTML = '<i class="fas fa-check"></i>';
-        copyBtn.style.color = '#28a745';
+        copyLinkBtn.innerHTML = '<i class="fas fa-check"></i>';
+        copyLinkBtn.classList.add('copied');
         
         setTimeout(() => {
-            copyBtn.innerHTML = originalIcon;
-            copyBtn.style.color = '#6c757d';
+            copyLinkBtn.innerHTML = originalIcon;
+            copyLinkBtn.classList.remove('copied');
         }, 2000);
-    }).catch(err => {
-        console.error('Failed to copy: ', err);
-        alert('Failed to copy link');
     });
 }
 
-// Function to vote on coupon
-function voteCoupon(voteType) {
-    if (!currentCoupon) return;
-    
-    // Send vote to server
-    fetch('/api/coupons/' + currentCoupon.id + '/vote', {
+// Tracking functions
+function trackCouponPopupView(couponId) {
+    // Send analytics data to backend
+    fetch('/api/coupons/' + couponId + '/track-popup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    });
+}
+
+function trackCouponCodeReveal(couponId) {
+    fetch('/api/coupons/' + couponId + '/track-reveal', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    });
+}
+
+function trackCouponCodeCopy(couponId) {
+    fetch('/api/coupons/' + couponId + '/track-copy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    });
+}
+
+function trackCouponClick(couponId) {
+    fetch('/api/coupons/' + couponId + '/track-click', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    });
+}
+
+function trackShare(platform, couponId) {
+    fetch('/api/coupons/' + couponId + '/track-share', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
-        body: JSON.stringify({
-            vote_type: voteType
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Update vote counts
-            updateVoteCounts(data.coupon);
-            
-            // Update button states
-            updateVoteButtonStates(voteType, data.action);
-            
-            // Track vote
-            trackCouponVote(currentCoupon.id, voteType, data.action);
-        }
-    })
-    .catch(error => {
-        console.error('Error voting:', error);
-        alert('Failed to vote. Please try again.');
+        body: JSON.stringify({ platform: platform })
     });
 }
-
-// Function to update vote counts
-function updateVoteCounts(coupon) {
-    document.getElementById('upvoteCount').textContent = coupon.upvotes_count || 0;
-    document.getElementById('downvoteCount').textContent = coupon.downvotes_count || 0;
-    document.getElementById('likeCount').textContent = coupon.likes_count || 0;
-    document.getElementById('dislikeCount').textContent = coupon.dislikes_count || 0;
-}
-
-// Function to update vote button states
-function updateVoteButtonStates(voteType, action) {
-    const buttons = ['upvoteBtn', 'downvoteBtn', 'likeBtn', 'dislikeBtn'];
-    
-    buttons.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        btn.classList.remove('active', 'liked');
-    });
-    
-    if (action === 'added') {
-        const activeBtn = document.getElementById(voteType + 'Btn');
-        if (voteType === 'like') {
-            activeBtn.classList.add('liked');
-        } else {
-            activeBtn.classList.add('active');
-        }
-    }
-}
-
-// Function to share coupon
-function shareCoupon(platform) {
-    if (!currentCoupon) return;
-    
-    const shareData = {
-        title: currentCoupon.title,
-        text: `Check out this amazing coupon: ${currentCoupon.title}`,
-        url: window.location.href
-    };
-    
-    let shareUrl = '';
-    
-    switch (platform) {
-        case 'facebook':
-            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`;
-            break;
-        case 'twitter':
-            shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareData.text)}&url=${encodeURIComponent(shareData.url)}`;
-            break;
-        case 'whatsapp':
-            shareUrl = `https://wa.me/?text=${encodeURIComponent(shareData.text + ' ' + shareData.url)}`;
-            break;
-        case 'telegram':
-            shareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`;
-            break;
-        case 'email':
-            shareUrl = `mailto:?subject=${encodeURIComponent(shareData.title)}&body=${encodeURIComponent(shareData.text + '\n\n' + shareData.url)}`;
-            break;
-    }
-    
-    if (shareUrl) {
-        window.open(shareUrl, '_blank', 'width=600,height=400');
-    }
-    
-    // Track share
-    trackCouponShare(currentCoupon.id, platform);
-}
-
-// Function to track coupon popup view
-function trackCouponPopupView(couponId) {
-    // Send analytics data
-    if (typeof gtag !== 'undefined') {
-        gtag('event', 'view_coupon_popup', {
-            'coupon_id': couponId
-        });
-    }
-}
-
-// Function to track coupon code reveal
-function trackCouponCodeReveal(couponId) {
-    // Send analytics data
-    if (typeof gtag !== 'undefined') {
-        gtag('event', 'reveal_coupon_code', {
-            'coupon_id': couponId
-        });
-    }
-}
-
-// Function to track coupon code copy
-function trackCouponCodeCopy(couponId) {
-    // Send analytics data
-    if (typeof gtag !== 'undefined') {
-        gtag('event', 'copy_coupon_code', {
-            'coupon_id': couponId
-        });
-    }
-}
-
-// Function to track coupon click
-function trackCouponClick() {
-    if (!currentCoupon) return;
-    
-    // Send analytics data
-    if (typeof gtag !== 'undefined') {
-        gtag('event', 'click_coupon', {
-            'coupon_id': currentCoupon.id,
-            'coupon_title': currentCoupon.title,
-            'store_name': currentCoupon.store_name
-        });
-    }
-}
-
-// Function to track coupon vote
-function trackCouponVote(couponId, voteType, action) {
-    // Send analytics data
-    if (typeof gtag !== 'undefined') {
-        gtag('event', 'vote_coupon', {
-            'coupon_id': couponId,
-            'vote_type': voteType,
-            'action': action
-        });
-    }
-}
-
-// Function to track coupon share
-function trackCouponShare(couponId, platform) {
-    // Send analytics data
-    if (typeof gtag !== 'undefined') {
-        gtag('event', 'share_coupon', {
-            'coupon_id': couponId,
-            'platform': platform
-        });
-    }
-}
-
-// Close popup when clicking outside
-document.addEventListener('click', function(event) {
-    const popup = document.getElementById('couponPopup');
-    if (event.target === popup) {
-        closeCouponPopup();
-    }
-});
-
-// Close popup with Escape key
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeCouponPopup();
-    }
-});
 </script>
+@endif
