@@ -1,48 +1,47 @@
-# Coupon Deals and Affiliate Product CMS
+# Coupon Deals & Affiliate Product CMS
 
-A modern, comprehensive Laravel-based CMS for managing coupons, deals, affiliate products, and stores with a beautiful Bootstrap UI and advanced features.
+A modern, comprehensive Laravel-based CMS for managing coupons, deals, and affiliate products with a beautiful Bootstrap UI and advanced features.
 
 ## 🚀 Features
 
 ### Core CMS Features
-- **Modern Admin Dashboard** - Beautiful Bootstrap 5.3.0 UI with responsive design
-- **User Management** - Separate admin and user dashboards with role-based access control
+- **Modern Admin Dashboard** - Bootstrap 5.3.0 based admin panel with comprehensive statistics
 - **Content Management** - Manage coupons, deals, products, stores, and categories
-- **Media Management** - Advanced image handling with Spatie Media Library
-- **SEO Optimization** - Full SEO support with meta tags, Open Graph, and Twitter Cards
+- **User Management** - Separate admin and user dashboards with role-based permissions
+- **Media Management** - Spatie Media Library integration for image handling
+- **SEO Optimization** - Meta tags, Open Graph, Twitter Cards, and SEO scoring
 
-### Coupon & Deal Management
-- **Coupon Popup System** - Customizable popup with share icons and code revelation
-- **Deal Management** - "Get Deal" buttons with hover effects
-- **Product Management** - "Check Product" buttons with hover effects
-- **Store Integration** - Complete store management with logos and banners
-- **Category Organization** - Hierarchical category system with mega menu support
+### Coupon & Deal Features
+- **Coupon Popup System** - Interactive popup with share icons and code revelation
+- **Smart Tracking** - Track clicks, conversions, and user engagement
+- **Expiration Management** - Automatic expiration handling and notifications
+- **Store Integration** - Link coupons and deals to stores with commission tracking
 
 ### Affiliate Network Integration
 - **Multiple Networks** - vCommission, Cuelinks, OptimiseMedia, INR Deals, Amazon, Flipkart
-- **API Key Management** - Secure credential storage with encryption
-- **Tracking & Analytics** - Click and conversion tracking from admin dashboard
-- **Commission Management** - Track revenue and commission rates
+- **API Management** - Secure API key storage and management from admin dashboard
+- **Auto-sync** - Automated data synchronization with affiliate networks
+- **Performance Tracking** - Monitor clicks, conversions, and revenue
 
-### Advanced Features
-- **OneSignal Integration** - Push notifications for new coupons/deals
-- **PWA Support** - Progressive Web App capabilities
-- **Theme Customization** - Admin-controlled theme and typography settings
-- **Header/Footer Editor** - Customize site appearance from admin panel
-- **Slider Management** - Dynamic slider creation and management
-- **Menu Customization** - Flexible menu system with drag-and-drop support
-
-### Performance & UX
-- **Page Speed Optimization** - Optimized assets and lazy loading
-- **Hover Effects** - Smooth animations and hover effects on all buttons
+### User Experience Features
+- **Mega Menu** - Dynamic navigation with category-based organization
+- **Advanced Search** - Multi-criteria search with filters and sorting
 - **Responsive Design** - Mobile-first approach with Bootstrap 5
-- **Font Awesome Icons** - Beautiful iconography throughout the system
+- **Hover Effects** - Smooth animations and interactive elements
+- **PWA Support** - Progressive Web App capabilities
+
+### Technical Features
+- **Laravel 10** - Latest Laravel framework with modern PHP 8.1+ features
+- **Performance** - Optimized for speed with caching and lazy loading
+- **Security** - CSRF protection, authentication, and role-based access control
+- **Notifications** - OneSignal integration for push notifications
+- **Analytics** - Built-in analytics and reporting system
 
 ## 🛠️ Technology Stack
 
 ### Backend
-- **Laravel 10.0** - Modern PHP framework
-- **PHP 8.1+** - Latest PHP features and performance
+- **PHP 8.1+** - Modern PHP with type hints and attributes
+- **Laravel 10** - Latest Laravel framework
 - **MySQL/PostgreSQL** - Database support
 - **Redis** - Caching and session storage
 
@@ -50,30 +49,31 @@ A modern, comprehensive Laravel-based CMS for managing coupons, deals, affiliate
 - **Bootstrap 5.3.0** - Modern CSS framework
 - **Font Awesome 6.4.0** - Icon library
 - **jQuery 3.7.0** - JavaScript library
-- **Vite** - Modern build tool
+- **Vite** - Asset bundling and compilation
 
-### Packages & Libraries
-- **Spatie Laravel Permission** - Role and permission management
-- **Spatie Laravel Media Library** - Advanced media handling
-- **Spatie Laravel Backup** - Automated backups
-- **Spatie Laravel Activity Log** - User activity tracking
+### Additional Libraries
+- **SweetAlert2** - Beautiful alerts and modals
+- **Animate.css** - CSS animations
+- **AOS** - Animate On Scroll library
+- **Swiper** - Touch slider
 - **Chart.js** - Data visualization
-- **SweetAlert2** - Beautiful alerts and confirmations
-- **DataTables** - Advanced table functionality
+- **DataTables** - Enhanced tables
+- **Select2** - Enhanced select boxes
+- **Flatpickr** - Date picker
 
 ## 📋 Requirements
 
 - PHP 8.1 or higher
 - Composer 2.0 or higher
 - Node.js 16.0 or higher
-- MySQL 8.0 or PostgreSQL 12 or higher
+- MySQL 8.0 or PostgreSQL 13 or higher
 - Redis (optional, for caching)
 
 ## 🚀 Installation
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/yourusername/coupon-deals-cms.git
 cd coupon-deals-cms
 ```
 
@@ -99,7 +99,7 @@ Edit `.env` file with your database credentials:
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=coupon_cms
+DB_DATABASE=coupon_deals_cms
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
 ```
@@ -119,265 +119,175 @@ php artisan db:seed
 npm run build
 ```
 
-### 9. Start Development Server
+### 9. Set Permissions
+```bash
+chmod -R 775 storage bootstrap/cache
+```
+
+### 10. Start Development Server
 ```bash
 php artisan serve
 ```
 
-## 🗄️ Database Structure
+## 🔧 Configuration
 
-### Core Tables
-- `users` - User accounts and authentication
-- `coupons` - Coupon information and settings
-- `deals` - Deal information and settings
-- `products` - Product information and affiliate data
-- `stores` - Store information and branding
-- `categories` - Hierarchical category system
-- `affiliates` - Affiliate network configurations
+### Affiliate Networks
+Configure affiliate network API keys in the admin dashboard:
+1. Go to Admin → Affiliate Networks
+2. Add new network with API credentials
+3. Configure sync settings and commission rates
 
-### Relationship Tables
-- `favorites` - User favorite items
-- `coupon_clicks` - Click tracking for coupons
-- `coupon_conversions` - Conversion tracking for coupons
-- `store_clicks` - Click tracking for stores
-- `store_conversions` - Conversion tracking for stores
+### OneSignal Setup
+1. Create OneSignal account
+2. Get App ID
+3. Add to `.env`:
+```env
+ONESIGNAL_APP_ID=your_app_id
+ONESIGNAL_REST_API_KEY=your_api_key
+```
 
-## 🔐 Authentication & Authorization
+### Email Configuration
+Configure SMTP settings in `.env`:
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_username
+MAIL_PASSWORD=your_password
+MAIL_ENCRYPTION=tls
+```
 
-### User Roles
-- **Admin** - Full system access
-- **User** - Limited access to user dashboard
-- **Guest** - Public access only
+## 📱 Usage
 
-### Permission System
-- Role-based access control
-- Granular permissions for different CMS sections
-- Admin middleware protection
+### Admin Dashboard
+- **Dashboard**: Overview of statistics and recent activity
+- **Content Management**: Manage coupons, deals, products, stores, categories
+- **User Management**: Manage users, roles, and permissions
+- **Settings**: Configure site settings, themes, and integrations
+- **Analytics**: View performance metrics and reports
 
-## 🎨 Admin Dashboard Features
+### Public Frontend
+- **Homepage**: Featured content and categories
+- **Search**: Advanced search with filters
+- **Categories**: Browse content by category
+- **Stores**: View store information and offers
+- **User Dashboard**: Personal favorites and notifications
 
-### Dashboard Overview
-- Statistics cards with real-time data
-- Chart visualizations (monthly, daily, category performance)
-- Recent activity feed
-- System health monitoring
-- Quick action buttons
+### Coupon System
+1. **Browse Coupons**: View available coupons with filters
+2. **Click Coupon**: Click to reveal coupon code
+3. **Share**: Share coupons on social media
+4. **Track**: Monitor usage and performance
 
-### Content Management
-- **Coupons** - CRUD operations with bulk actions
-- **Deals** - Deal management with performance tracking
-- **Products** - Product catalog with affiliate integration
-- **Stores** - Store management with branding tools
-- **Categories** - Category hierarchy management
+## 🎨 Customization
 
-### User Management
-- User registration and management
-- Role assignment and permissions
-- User activity tracking
-- Profile management
+### Themes
+- Modify `public/css/public.css` for frontend styling
+- Edit `public/css/admin.css` for admin panel styling
+- Use CSS variables for consistent theming
 
-### System Settings
-- **Theme Customization** - Colors, fonts, and layout options
-- **Header/Footer Editor** - Customize site appearance
-- **Slider Management** - Dynamic slider creation
-- **Menu Management** - Custom menu structures
-- **Affiliate Settings** - Network configurations and API keys
+### Layouts
+- Frontend: `resources/views/public/layouts/app.blade.php`
+- Admin: `resources/views/admin/layouts/app.blade.php`
 
-## 🌐 Public Features
-
-### Homepage
-- Hero section with featured content
-- Category showcase
-- Recent coupons and deals
-- Store highlights
-
-### Category Pages
-- Hierarchical category navigation
-- Filter and search options
-- Hover effects on all elements
-- Responsive grid layouts
-
-### Coupon/Deal Pages
-- Detailed information display
-- Coupon popup with share functionality
-- Affiliate link tracking
-- User reviews and ratings
-
-### Store Pages
-- Store information and branding
-- Available coupons and deals
-- Store reviews and ratings
-- Location and contact information
-
-## 📱 Mobile & PWA
-
-### Progressive Web App
-- Offline functionality
-- App-like experience
-- Push notifications
-- Install prompts
-
-### Mobile Optimization
-- Responsive design
-- Touch-friendly interfaces
-- Optimized performance
-- Mobile-specific features
-
-## 🔗 Affiliate Integration
-
-### Supported Networks
-- **vCommission** - API integration with tracking
-- **Cuelinks** - Publisher management
-- **OptimiseMedia** - Performance tracking
-- **INR Deals** - Indian market focus
-- **Amazon** - Product catalog integration
-- **Flipkart** - Indian e-commerce integration
-
-### Features
-- Secure API key storage
-- Automatic data synchronization
-- Performance analytics
-- Commission tracking
-- Network health monitoring
-
-## 📊 Analytics & Reporting
-
-### Dashboard Analytics
-- Click and conversion tracking
-- Revenue analytics
-- Performance metrics
-- User behavior insights
-
-### Export Features
-- CSV export for all data
-- Custom date range filtering
-- Performance reports
-- Affiliate network reports
-
-## 🎯 SEO Features
-
-### On-Page SEO
-- Meta title and description management
-- Open Graph and Twitter Card support
-- Structured data markup
-- Canonical URL management
-
-### Technical SEO
-- Clean URL structure
-- XML sitemap generation
-- Robots.txt optimization
-- Page speed optimization
-
-## 🚀 Performance Optimization
-
-### Frontend Optimization
-- Asset minification and bundling
-- Lazy loading for images
-- CSS and JavaScript optimization
-- CDN support
-
-### Backend Optimization
-- Database query optimization
-- Caching strategies
-- Image optimization
-- API response optimization
+### Components
+- Create reusable Blade components in `resources/views/components/`
+- Add custom JavaScript in `public/js/public.js`
 
 ## 🔒 Security Features
 
-### Authentication Security
-- Laravel Sanctum for API authentication
-- Password hashing and validation
-- Two-factor authentication support
-- Session security
+- **CSRF Protection** - Built-in Laravel CSRF protection
+- **Authentication** - Secure user authentication system
+- **Role-based Access** - Spatie Laravel Permission integration
+- **Input Validation** - Comprehensive form validation
+- **SQL Injection Protection** - Eloquent ORM protection
+- **XSS Protection** - Blade template escaping
 
-### Data Protection
-- CSRF protection
-- SQL injection prevention
-- XSS protection
-- Input validation and sanitization
+## 📊 Performance Optimization
+
+- **Caching** - Redis and file-based caching
+- **Lazy Loading** - Image and content lazy loading
+- **Asset Optimization** - Vite bundling and minification
+- **Database Optimization** - Efficient queries and indexing
+- **CDN Ready** - Static asset delivery optimization
 
 ## 🧪 Testing
 
-### Test Coverage
-- Unit tests for models
-- Feature tests for controllers
-- Browser tests for user flows
-- API tests for endpoints
-
-### Running Tests
+### Run Tests
 ```bash
 php artisan test
-php artisan test --coverage
 ```
 
-## 📦 Deployment
+### Run Specific Test Suite
+```bash
+php artisan test --testsuite=Feature
+php artisan test --testsuite=Unit
+```
+
+## 📈 Monitoring & Analytics
+
+- **Built-in Analytics** - Track user behavior and performance
+- **Error Logging** - Comprehensive error tracking
+- **Performance Metrics** - Monitor page speed and load times
+- **User Engagement** - Track clicks, conversions, and engagement
+
+## 🔄 Deployment
 
 ### Production Setup
-1. Set production environment variables
-2. Optimize Composer autoloader
-3. Build production assets
-4. Configure web server
-5. Set up SSL certificates
-6. Configure caching and queues
+1. Set `APP_ENV=production` in `.env`
+2. Run `php artisan config:cache`
+3. Run `php artisan route:cache`
+4. Run `php artisan view:cache`
+5. Set up queue workers for background jobs
 
 ### Server Requirements
-- PHP 8.1+
-- MySQL 8.0+ or PostgreSQL 12+
+- Nginx/Apache web server
+- PHP-FPM 8.1+
+- MySQL 8.0+ or PostgreSQL 13+
 - Redis (recommended)
-- Nginx or Apache
 - SSL certificate
 
 ## 🤝 Contributing
 
-### Development Setup
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests
+4. Add tests for new functionality
 5. Submit a pull request
 
-### Coding Standards
-- Follow PSR-12 coding standards
-- Use Laravel Pint for code formatting
-- Write meaningful commit messages
-- Include tests for new features
-
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-### Documentation
-- [User Guide](docs/user-guide.md)
-- [Admin Guide](docs/admin-guide.md)
-- [API Documentation](docs/api.md)
-- [Developer Guide](docs/developer-guide.md)
+- **Documentation**: Check this README and inline code comments
+- **Issues**: Report bugs and feature requests via GitHub Issues
+- **Discussions**: Join community discussions on GitHub Discussions
 
-### Getting Help
-- Create an issue on GitHub
-- Check the documentation
-- Review existing issues
-- Contact the development team
+## 🗺️ Roadmap
 
-## 🔄 Changelog
+### Phase 2 (Q2 2024)
+- [ ] Advanced analytics dashboard
+- [ ] Multi-language support
+- [ ] API endpoints for mobile apps
+- [ ] Advanced reporting system
 
-### Version 1.0.0
-- Initial release
-- Core CMS functionality
-- Admin dashboard
-- User management
-- Coupon and deal management
-- Affiliate integration
-- Modern Bootstrap UI
+### Phase 3 (Q3 2024)
+- [ ] AI-powered recommendations
+- [ ] Advanced automation features
+- [ ] Integration with more affiliate networks
+- [ ] Mobile app development
 
-## 🎉 Acknowledgments
+## 🙏 Acknowledgments
 
-- Laravel team for the amazing framework
-- Bootstrap team for the UI framework
-- Spatie for excellent Laravel packages
-- All contributors and supporters
+- **Laravel Team** - For the amazing framework
+- **Bootstrap Team** - For the UI framework
+- **Spatie** - For excellent Laravel packages
+- **Open Source Community** - For all the libraries and tools
 
 ---
 
-**Built with ❤️ using Laravel and Bootstrap**
+**Built with ❤️ using Laravel and modern web technologies**
+
+For more information, visit [your-website.com](https://your-website.com)

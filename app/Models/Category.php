@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
+use Illuminate\Support\Str;
 
 class Category extends Model
 {
@@ -15,38 +16,43 @@ class Category extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'short_description',
         'parent_id',
-        'is_active',
+        'icon',
+        'color',
         'is_featured',
+        'is_active',
         'sort_order',
         'meta_title',
         'meta_description',
         'meta_keywords',
         'og_image',
         'twitter_image',
-        'icon_class',
-        'color',
-        'banner_text',
-        'category_type', // coupon, deal, product, store
-        'commission_rate',
         'created_by',
-        'status',
-        'seo_settings',
-        'display_settings',
-        'filter_options',
-        'category_popup_settings'
+        'status', // active, inactive, draft
+        'banner_text',
+        'banner_color',
+        'show_in_menu',
+        'show_in_footer',
+        'show_in_homepage',
+        'seo_score',
+        'page_speed_score'
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'is_featured' => 'boolean',
-        'seo_settings' => 'array',
-        'display_settings' => 'array',
-        'filter_options' => 'array',
-        'category_popup_settings' => 'array',
-        'commission_rate' => 'decimal:2'
+        'is_active' => 'boolean',
+        'show_in_menu' => 'boolean',
+        'show_in_footer' => 'boolean',
+        'show_in_homepage' => 'boolean',
+        'sort_order' => 'integer',
+        'seo_score' => 'integer',
+        'page_speed_score' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime'
     ];
 
     protected $dates = [
@@ -71,9 +77,14 @@ class Category extends Model
         return $this->children()->with('allChildren');
     }
 
-    public function allParents()
+    public function descendants()
     {
-        return $this->parent()->with('allParents');
+        return $this->children()->with('descendants');
+    }
+
+    public function ancestors()
+    {
+        return $this->parent()->with('ancestors');
     }
 
     public function coupons()
@@ -93,7 +104,7 @@ class Category extends Model
 
     public function stores()
     {
-        return $this->hasMany(Store::class);
+        return $this->belongsToMany(Store::class, 'store_categories');
     }
 
     public function creator()
@@ -101,15 +112,11 @@ class Category extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function menuItems()
-    {
-        return $this->morphMany(MenuItem::class, 'linkable');
-    }
-
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('is_active', true)
+                    ->where('status', 'active');
     }
 
     public function scopeFeatured($query)
@@ -122,14 +129,24 @@ class Category extends Model
         return $query->whereNull('parent_id');
     }
 
-    public function scopeByType($query, $type)
-    {
-        return $query->where('category_type', $type);
-    }
-
     public function scopeByParent($query, $parentId)
     {
         return $query->where('parent_id', $parentId);
+    }
+
+    public function scopeMenuVisible($query)
+    {
+        return $query->where('show_in_menu', true);
+    }
+
+    public function scopeFooterVisible($query)
+    {
+        return $query->where('show_in_footer', true);
+    }
+
+    public function scopeHomepageVisible($query)
+    {
+        return $query->where('show_in_homepage', true);
     }
 
     public function scopeSearch($query, $search)
@@ -142,191 +159,128 @@ class Category extends Model
 
     public function scopeOrdered($query)
     {
-        return $query->orderBy('sort_order', 'asc')->orderBy('name', 'asc');
+        return $query->orderBy('sort_order', 'asc')
+                    ->orderBy('name', 'asc');
     }
 
     // Accessors
-    public function getFullNameAttribute()
-    {
-        if ($this->parent) {
-            return $this->parent->full_name . ' > ' . $this->name;
-        }
-        return $this->name;
-    }
-
-    public function getBreadcrumbAttribute()
-    {
-        $breadcrumb = [];
-        $current = $this;
-        
-        while ($current) {
-            array_unshift($breadcrumb, [
-                'id' => $current->id,
-                'name' => $current->name,
-                'slug' => $current->slug
-            ]);
-            $current = $current->parent;
-        }
-        
-        return $breadcrumb;
-    }
-
-    public function getLevelAttribute()
-    {
-        $level = 0;
-        $current = $this;
-        
-        while ($current->parent) {
-            $level++;
-            $current = $current->parent;
-        }
-        
-        return $level;
-    }
-
     public function getIsRootAttribute()
     {
         return is_null($this->parent_id);
     }
 
-    public function getIsLeafAttribute()
+    public function getIsChildAttribute()
     {
-        return $this->children()->count() === 0;
+        return !is_null($this->parent_id);
     }
 
     public function getHasChildrenAttribute()
     {
-        return $this->children()->count() > 0;
+        return $this->children()->exists();
+    }
+
+    public function getLevelAttribute()
+    {
+        if ($this->is_root) return 0;
+        return $this->parent ? $this->parent->level + 1 : 1;
+    }
+
+    public function getBreadcrumbAttribute()
+    {
+        $breadcrumb = collect([$this]);
+        $parent = $this->parent;
+        
+        while ($parent) {
+            $breadcrumb->prepend($parent);
+            $parent = $parent->parent;
+        }
+        
+        return $breadcrumb;
+    }
+
+    public function getBreadcrumbTextAttribute()
+    {
+        return $this->breadcrumb->pluck('name')->implode(' > ');
     }
 
     public function getImageUrlAttribute()
     {
-        return $this->getFirstMediaUrl('category_images', 'medium') ?: asset('images/default-category.jpg');
+        return $this->getFirstMediaUrl('categories', 'medium') ?: asset('images/default-category.jpg');
     }
 
     public function getThumbnailUrlAttribute()
     {
-        return $this->getFirstMediaUrl('category_images', 'thumbnail') ?: asset('images/default-category-thumb.jpg');
+        return $this->getFirstMediaUrl('categories', 'thumbnail') ?: asset('images/default-category-thumb.jpg');
     }
 
-    public function getBannerUrlAttribute()
+    public function getIconUrlAttribute()
     {
-        return $this->getFirstMediaUrl('category_banners', 'large') ?: asset('images/default-category-banner.jpg');
-    }
-
-    public function getIconHtmlAttribute()
-    {
-        if ($this->icon_class) {
-            return '<i class="' . $this->icon_class . '"></i>';
-        }
-        return '<i class="fas fa-folder"></i>';
-    }
-
-    public function getColorStyleAttribute()
-    {
-        if ($this->color) {
-            return 'color: ' . $this->color;
-        }
-        return '';
+        return $this->icon ?: 'fas fa-folder';
     }
 
     public function getContentCountAttribute()
     {
-        $count = 0;
-        
-        if ($this->category_type === 'coupon' || $this->category_type === 'all') {
-            $count += $this->coupons()->active()->count();
-        }
-        
-        if ($this->category_type === 'deal' || $this->category_type === 'all') {
-            $count += $this->deals()->active()->count();
-        }
-        
-        if ($this->category_type === 'product' || $this->category_type === 'all') {
-            $count += $this->products()->active()->count();
-        }
-        
-        if ($this->category_type === 'store' || $this->category_type === 'all') {
-            $count += $this->stores()->active()->count();
-        }
-        
-        return $count;
+        return $this->coupons()->count() + 
+               $this->deals()->count() + 
+               $this->products()->count();
     }
 
     public function getActiveContentCountAttribute()
     {
-        $count = 0;
-        
-        if ($this->category_type === 'coupon' || $this->category_type === 'all') {
-            $count += $this->coupons()->active()->count();
-        }
-        
-        if ($this->category_type === 'deal' || $this->category_type === 'all') {
-            $count += $this->deals()->active()->count();
-        }
-        
-        if ($this->category_type === 'product' || $this->category_type === 'all') {
-            $count += $this->products()->active()->count();
-        }
-        
-        if ($this->category_type === 'store' || $this->category_type === 'all') {
-            $count += $this->stores()->active()->count();
-        }
-        
-        return $count;
+        return $this->coupons()->active()->count() + 
+               $this->deals()->active()->count() + 
+               $this->products()->active()->count();
     }
 
-    public function getSeoData()
+    public function getStatusTextAttribute()
     {
-        return [
-            'title' => $this->meta_title ?: $this->name . ' - Coupons, Deals & Products',
-            'description' => $this->meta_description ?: $this->short_description ?: 'Find the best coupons, deals, and products in ' . $this->name . '. Save money with exclusive offers and discounts.',
-            'keywords' => $this->meta_keywords ?: $this->name . ', coupons, deals, discounts, savings, offers',
-            'og_image' => $this->og_image ?: $this->image_url,
-            'twitter_image' => $this->twitter_image ?: $this->image_url,
-            'canonical_url' => route('categories.show', $this->slug)
-        ];
+        return match($this->status) {
+            'active' => 'Active',
+            'inactive' => 'Inactive',
+            'draft' => 'Draft',
+            default => 'Unknown'
+        };
     }
 
     // Methods
-    public function getAllChildren()
+    public function getAllDescendants()
     {
-        $children = collect();
+        $descendants = collect();
         
         foreach ($this->children as $child) {
-            $children->push($child);
-            $children = $children->merge($child->getAllChildren());
+            $descendants->push($child);
+            $descendants = $descendants->merge($child->getAllDescendants());
         }
         
-        return $children;
+        return $descendants;
     }
 
-    public function getAllParents()
+    public function getAllAncestors()
     {
-        $parents = collect();
-        $current = $this->parent;
+        $ancestors = collect();
+        $parent = $this->parent;
         
-        while ($current) {
-            $parents->push($current);
-            $current = $current->parent;
+        while ($parent) {
+            $ancestors->prepend($parent);
+            $parent = $parent->parent;
         }
         
-        return $parents->reverse();
+        return $ancestors;
     }
 
-    public function getDescendants()
+    public function getPath()
     {
-        return $this->getAllChildren();
+        return $this->ancestors->pluck('slug')->push($this->slug)->implode('/');
     }
 
-    public function getAncestors()
+    public function getFullPath()
     {
-        return $this->getAllParents();
+        return '/categories/' . $this->getPath();
     }
 
     public function isDescendantOf($category)
     {
-        return $this->getAncestors()->contains('id', $category->id);
+        return $this->getAllAncestors()->contains($category);
     }
 
     public function isAncestorOf($category)
@@ -334,92 +288,96 @@ class Category extends Model
         return $category->isDescendantOf($this);
     }
 
-    public function getSiblings()
-    {
-        if ($this->parent_id) {
-            return static::where('parent_id', $this->parent_id)
-                        ->where('id', '!=', $this->id)
-                        ->get();
-        }
-        
-        return collect();
-    }
-
-    public function getPath()
-    {
-        $path = collect([$this]);
-        $current = $this;
-        
-        while ($current->parent) {
-            $path->prepend($current->parent);
-            $current = $current->parent;
-        }
-        
-        return $path;
-    }
-
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()
             ->generateSlugsFrom('name')
             ->saveSlugsTo('slug')
-            ->slugsShouldBeNoLongerThan(50);
+            ->doNotGenerateSlugsOnUpdate();
     }
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('category_images')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp'])
-            ->withResponsiveImages();
-            
-        $this->addMediaCollection('category_banners')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp'])
-            ->withResponsiveImages();
+        $this->addMediaCollection('categories')
+            ->singleFile()
+            ->useDisk('public');
+
+        $this->addMediaCollection('banners')
+            ->useDisk('public');
     }
 
-    public function updateContentCount()
+    // SEO Methods
+    public function getSeoTitle()
     {
-        $this->content_count = $this->getContentCountAttribute();
-        $this->save();
+        return $this->meta_title ?: $this->name;
     }
 
-    public function getFilterOptions()
+    public function getSeoDescription()
     {
-        $options = $this->filter_options ?: [];
+        return $this->meta_description ?: Str::limit($this->description, 160);
+    }
+
+    public function getSeoKeywords()
+    {
+        return $this->meta_keywords ?: $this->name;
+    }
+
+    public function getOgImage()
+    {
+        return $this->og_image ?: $this->image_url;
+    }
+
+    public function getTwitterImage()
+    {
+        return $this->twitter_image ?: $this->image_url;
+    }
+
+    // Performance Methods
+    public function calculateSeoScore()
+    {
+        $score = 0;
         
-        // Add dynamic filter options based on content
-        if ($this->category_type === 'product' || $this->category_type === 'all') {
-            $priceRange = $this->products()->selectRaw('MIN(sale_price) as min_price, MAX(sale_price) as max_price')->first();
-            if ($priceRange && $priceRange->min_price && $priceRange->max_price) {
-                $options['price_range'] = [
-                    'min' => $priceRange->min_price,
-                    'max' => $priceRange->max_price
-                ];
-            }
-            
-            $brands = $this->products()->distinct()->pluck('brand')->filter()->values();
-            if ($brands->count() > 0) {
-                $options['brands'] = $brands->toArray();
-            }
-        }
+        if ($this->meta_title) $score += 20;
+        if ($this->meta_description) $score += 20;
+        if ($this->meta_keywords) $score += 15;
+        if ($this->description && strlen($this->description) > 100) $score += 15;
+        if ($this->image_url) $score += 10;
+        if ($this->icon) $score += 10;
+        if ($this->color) $score += 5;
+        if ($this->banner_text) $score += 5;
         
-        return $options;
+        $this->update(['seo_score' => $score]);
+        return $score;
     }
 
-    public function getDisplaySettings()
+    // Menu Methods
+    public function getMenuData()
     {
-        $defaults = [
-            'show_banner' => true,
-            'show_description' => true,
-            'show_subcategories' => true,
-            'items_per_page' => 20,
-            'sort_options' => ['newest', 'popular', 'price_low', 'price_high', 'rating'],
-            'default_sort' => 'newest',
-            'show_filters' => true,
-            'show_pagination' => true
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'slug' => $this->slug,
+            'url' => $this->getFullPath(),
+            'icon' => $this->icon_url,
+            'color' => $this->color,
+            'children' => $this->children->active()->menuVisible()->ordered()->get()->map(function($child) {
+                return $child->getMenuData();
+            })
         ];
-        
-        $settings = $this->display_settings ?: [];
-        return array_merge($defaults, $settings);
+    }
+
+    // Statistics Methods
+    public function getStatistics()
+    {
+        return [
+            'total_coupons' => $this->coupons()->count(),
+            'active_coupons' => $this->coupons()->active()->count(),
+            'total_deals' => $this->deals()->count(),
+            'active_deals' => $this->deals()->active()->count(),
+            'total_products' => $this->products()->count(),
+            'active_products' => $this->products()->active()->count(),
+            'total_stores' => $this->stores()->count(),
+            'featured_stores' => $this->stores()->where('is_featured', true)->count()
+        ];
     }
 }
