@@ -13,6 +13,7 @@ use App\Http\Controllers\ApiController;
 use App\Http\Controllers\Admin\SliderController as AdminSliderController;
 use App\Http\Controllers\Admin\ThemeController as AdminThemeController;
 use App\Http\Controllers\Admin\AppearanceController as AdminAppearanceController;
+use App\Http\Controllers\Admin\IntegrationController as AdminIntegrationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,6 +74,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('appearance/footer', [AdminAppearanceController::class, 'saveFooter'])->name('appearance.footer.save');
         Route::get('appearance/menus', [AdminAppearanceController::class, 'menus'])->name('appearance.menus.edit');
         Route::post('appearance/menus', [AdminAppearanceController::class, 'saveMenus'])->name('appearance.menus.save');
+        Route::get('integrations/seo', [AdminIntegrationController::class, 'seo'])->name('integrations.seo.edit');
+        Route::post('integrations/seo', [AdminIntegrationController::class, 'seoSave'])->name('integrations.seo.save');
+        Route::get('integrations/google', [AdminIntegrationController::class, 'google'])->name('integrations.google.edit');
+        Route::post('integrations/google', [AdminIntegrationController::class, 'googleSave'])->name('integrations.google.save');
+        Route::get('integrations/adsense', [AdminIntegrationController::class, 'adsense'])->name('integrations.adsense.edit');
+        Route::post('integrations/adsense', [AdminIntegrationController::class, 'adsenseSave'])->name('integrations.adsense.save');
+        Route::get('integrations/onesignal', [AdminIntegrationController::class, 'onesignal'])->name('integrations.onesignal.edit');
+        Route::post('integrations/onesignal', [AdminIntegrationController::class, 'onesignalSave'])->name('integrations.onesignal.save');
     });
 
 require __DIR__.'/auth.php';

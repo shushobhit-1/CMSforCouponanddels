@@ -40,6 +40,13 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ asset('manifest.json') }}">
     <meta name="theme-color" content="#007bff">
+    @php $adsense = optional(\App\Models\Setting::where('key','adsense')->first())->value ?? []; @endphp
+    @if(!empty($adsense['enabled']) && !empty($adsense['publisher_id']))
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ $adsense['publisher_id'] }}" crossorigin="anonymous"></script>
+        @if(!empty($adsense['auto_ads']))
+            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+        @endif
+    @endif
     
     <!-- Custom Styles -->
     <style>
@@ -348,6 +355,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @php $onesignal = optional(\App\Models\Setting::where('key','onesignal')->first())->value ?? []; @endphp
+    @if(!empty($onesignal['enabled']) && !empty($onesignal['app_id']))
+        <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async></script>
+        <script>
+            window.OneSignal = window.OneSignal || [];
+            OneSignal.push(function() {
+                OneSignal.init({
+                    appId: "{{ $onesignal['app_id'] }}",
+                    safari_web_id: {{ !empty($onesignal['safari_web_id']) ? '"'.$onesignal['safari_web_id'].'"' : 'null' }},
+                    notifyButton: { enable: true }
+                });
+            });
+        </script>
+    @endif
     
     <!-- Custom JavaScript -->
     <script>
