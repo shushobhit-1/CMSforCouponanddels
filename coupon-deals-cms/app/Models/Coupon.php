@@ -49,5 +49,22 @@ class Coupon extends Model
     {
         return $this->belongsTo(Category::class);
     }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
+    }
+
+    public function scopeExpiringSoon($query)
+    {
+        return $query->where('expires_at', '>', now())
+                    ->where('expires_at', '<=', now()->addDays(7));
+    }
 }
 

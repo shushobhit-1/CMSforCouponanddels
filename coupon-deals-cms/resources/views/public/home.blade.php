@@ -5,6 +5,9 @@
 
 @section('content')
 <!-- Hero Section with Slider (if available) or Particles Background -->
+@php
+$homeSlider = $sliders->first();
+@endphp
 @if($homeSlider && is_array($homeSlider->slides) && count($homeSlider->slides))
 <section class="position-relative overflow-hidden">
     <div id="homeCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">

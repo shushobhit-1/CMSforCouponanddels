@@ -14,56 +14,108 @@ class HomeController extends Controller
 {
     public function index()
     {
-        // Get featured content
-        $featuredCoupons = Coupon::active()
-            ->featured()
-            ->with(['store', 'category'])
-            ->limit(8)
-            ->get();
+        try {
+            // Get featured content with error handling
+            $featuredCoupons = collect([]);
+            $featuredDeals = collect([]);
+            $featuredProducts = collect([]);
+            $popularStores = collect([]);
+            $categories = collect([]);
+            $sliders = collect([]);
             
-        $featuredDeals = Deal::active()
-            ->featured()
-            ->with(['store', 'category'])
-            ->limit(6)
-            ->get();
+            // Try to get coupons
+            try {
+                $featuredCoupons = Coupon::active()
+                    ->featured()
+                    ->with(['store', 'category'])
+                    ->limit(8)
+                    ->get();
+            } catch (\Exception $e) {
+                \Log::error('Error fetching featured coupons: ' . $e->getMessage());
+            }
             
-        $featuredProducts = Product::active()
-            ->featured()
-            ->with(['store', 'category'])
-            ->limit(8)
-            ->get();
+            // Try to get deals
+            try {
+                $featuredDeals = Deal::active()
+                    ->featured()
+                    ->with(['store', 'category'])
+                    ->limit(6)
+                    ->get();
+            } catch (\Exception $e) {
+                \Log::error('Error fetching featured deals: ' . $e->getMessage());
+            }
             
-        $popularStores = Store::active()
-            ->withCount(['coupons', 'deals', 'products'])
-            ->orderByDesc('coupons_count')
-            ->limit(12)
-            ->get();
+            // Try to get products
+            try {
+                $featuredProducts = Product::active()
+                    ->featured()
+                    ->with(['store', 'category'])
+                    ->limit(8)
+                    ->get();
+            } catch (\Exception $e) {
+                \Log::error('Error fetching featured products: ' . $e->getMessage());
+            }
             
-        $categories = Category::active()
-            ->withCount(['coupons', 'deals', 'products'])
-            ->orderByDesc('coupons_count')
-            ->limit(8)
-            ->get();
+            // Try to get stores
+            try {
+                $popularStores = Store::active()
+                    ->withCount(['coupons', 'deals', 'products'])
+                    ->orderByDesc('coupons_count')
+                    ->limit(12)
+                    ->get();
+            } catch (\Exception $e) {
+                \Log::error('Error fetching popular stores: ' . $e->getMessage());
+            }
             
-        // Get statistics
-        $stats = [
-            'total_coupons' => Coupon::active()->count(),
-            'total_deals' => Deal::active()->count(),
-            'total_products' => Product::active()->count(),
-            'total_stores' => Store::active()->count(),
-            'money_saved' => 50000, // This would be calculated from actual savings
-        ];
-        
-        $homeSlider = Slider::where('slug', 'home-hero')->where('is_active', true)->first();
+            // Try to get categories
+            try {
+                $categories = Category::active()
+                    ->withCount(['coupons', 'deals', 'products'])
+                    ->orderByDesc('coupons_count')
+                    ->limit(8)
+                    ->get();
+            } catch (\Exception $e) {
+                \Log::error('Error fetching categories: ' . $e->getMessage());
+            }
+            
+            // Get statistics
+            $stats = [
+                'total_coupons' => 0,
+                'total_deals' => 0,
+                'total_products' => 0,
+                'total_stores' => 0,
+                'money_saved' => 50000,
+            ];
+            
+            // Try to get stats
+            try {
+                $stats['total_coupons'] = Coupon::active()->count();
+                $stats['total_deals'] = Deal::active()->count();
+                $stats['total_products'] = Product::active()->count();
+                $stats['total_stores'] = Store::active()->count();
+            } catch (\Exception $e) {
+                \Log::error('Error fetching stats: ' . $e->getMessage());
+            }
+            
+            // Try to get sliders
+            try {
+                $sliders = Slider::where('is_active', true)->get();
+            } catch (\Exception $e) {
+                \Log::error('Error fetching sliders: ' . $e->getMessage());
+            }
 
-        return view('public.home', compact(
-            'featuredCoupons',
-            'featuredDeals', 
-            'featuredProducts',
-            'popularStores',
-            'categories',
-            'stats',
-            'homeSlider'
-        ));
+            return view('public.home', compact(
+                'featuredCoupons',
+                'featuredDeals', 
+                'featuredProducts',
+                'popularStores',
+                'categories',
+                'stats',
+                'sliders'
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Error in HomeController index: ' . $e->getMessage());
+            return response('Application Error: ' . $e->getMessage(), 500);
+        }
     }
 }
