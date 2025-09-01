@@ -1,936 +1,544 @@
-@extends('layouts.app')
+@extends('layouts.public')
 
-@section('title', 'Latest Coupons & Discount Codes')
-@section('meta_description', 'Discover the best coupons, discount codes, and deals from top online stores. Save money on your favorite products with our exclusive offers.')
+@section('title', 'Best Coupons & Discount Codes - Save Money Today')
+@section('meta_description', 'Browse thousands of verified coupons and discount codes from top brands. Save money on your favorite products with our latest deals.')
+
+@push('styles')
+<style>
+    .filters-sidebar {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 100px;
+    }
+    
+    .coupon-grid {
+        gap: 1.5rem;
+    }
+    
+    .coupon-card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+        position: relative;
+        transition: all 0.3s ease;
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+    }
+    
+    .coupon-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    
+    .coupon-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 25px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        z-index: 2;
+        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+    }
+    
+    .store-logo {
+        width: 70px;
+        height: 70px;
+        object-fit: contain;
+        border-radius: 10px;
+        background: white;
+        padding: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .coupon-card:hover .store-logo {
+        transform: scale(1.1);
+    }
+    
+    .coupon-btn {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+        border-radius: 25px;
+        padding: 12px 25px;
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .coupon-btn:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    .coupon-btn:hover:before {
+        left: 100%;
+    }
+    
+    .coupon-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+        color: white;
+    }
+    
+    .coupon-stats {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .verified-badge {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+    
+    .filter-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .filter-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .filter-title {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+    }
+    
+    .filter-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+    
+    .filter-option:hover {
+        color: #007bff;
+    }
+    
+    .filter-count {
+        background: #e9ecef;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .sort-dropdown {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 10px 15px;
+        font-weight: 500;
+    }
+    
+    .pagination {
+        justify-content: center;
+        margin-top: 3rem;
+    }
+    
+    .page-link {
+        border-radius: 10px;
+        margin: 0 5px;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .page-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+        margin-bottom: 2rem;
+    }
+    
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: "›";
+        font-weight: bold;
+        color: #007bff;
+    }
+    
+    .results-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+        border-radius: 0 0 30px 30px;
+    }
+</style>
+@endpush
 
 @section('content')
-<!-- Hero Section -->
-<section class="hero-section bg-gradient-primary text-white py-5">
+<!-- Results Header -->
+<section class="results-header">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1 class="hero-title display-4 fw-bold mb-3">
-                    Save Big with <span class="text-warning">Exclusive Coupons</span>
-                </h1>
-                <p class="hero-subtitle lead mb-4">
-                    Discover thousands of verified coupons, discount codes, and deals from your favorite online stores. 
-                    Start saving money today!
-                </p>
-                <div class="hero-actions">
-                    <a href="#featured-coupons" class="btn btn-warning btn-lg me-3">
-                        <i class="fas fa-tags me-2"></i>Browse Coupons
-                    </a>
-                    <a href="#stores" class="btn btn-outline-light btn-lg">
-                        <i class="fas fa-store me-2"></i>View Stores
-                    </a>
-                </div>
-            </div>
-            <div class="col-lg-6 text-center">
-                <div class="hero-image">
-                    <i class="fas fa-gift display-1 text-warning"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Search and Filters Section -->
-<section class="search-section py-4 bg-light">
-    <div class="container">
-        <div class="row justify-content-center">
             <div class="col-lg-8">
-                <form action="{{ route('coupons.index') }}" method="GET" class="search-form">
-                    <div class="input-group input-group-lg">
-                        <input type="text" 
-                               name="search" 
-                               class="form-control" 
-                               placeholder="Search for coupons, stores, or categories..."
-                               value="{{ request('search') }}">
-                        <button class="btn btn-primary" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </form>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb text-white">
+                        <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-white text-decoration-none">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Coupons</li>
+                    </ol>
+                </nav>
+                <h1 class="display-4 fw-bold mb-3">Latest Coupons & Discount Codes</h1>
+                <p class="lead mb-0">Save money with verified coupons from your favorite stores</p>
             </div>
-        </div>
-        
-        <!-- Quick Filters -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="quick-filters d-flex flex-wrap justify-content-center gap-2">
-                    <a href="{{ route('coupons.index', ['featured' => 1]) }}" 
-                       class="btn btn-outline-primary btn-sm {{ request('featured') ? 'active' : '' }}">
-                        <i class="fas fa-star me-1"></i>Featured
-                    </a>
-                    <a href="{{ route('coupons.index', ['new' => 1]) }}" 
-                       class="btn btn-outline-success btn-sm {{ request('new') ? 'active' : '' }}">
-                        <i class="fas fa-fire me-1"></i>New Arrivals
-                    </a>
-                    <a href="{{ route('coupons.index', ['expiring' => 1]) }}" 
-                       class="btn btn-outline-warning btn-sm {{ request('expiring') ? 'active' : '' }}">
-                        <i class="fas fa-clock me-1"></i>Expiring Soon
-                    </a>
-                    <a href="{{ route('coupons.index', ['popular' => 1]) }}" 
-                       class="btn btn-outline-info btn-sm {{ request('popular') ? 'active' : '' }}">
-                        <i class="fas fa-thumbs-up me-1"></i>Popular
-                    </a>
+            <div class="col-lg-4 text-end">
+                <div class="d-flex align-items-center justify-content-end gap-3">
+                    <div class="text-center">
+                        <h3 class="mb-0" data-countup="{{ $coupons->total() }}">0</h3>
+                        <small>Total Coupons</small>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="mb-0" data-countup="{{ $stores->count() }}">0</h3>
+                        <small>Partner Stores</small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Featured Coupons Section -->
-<section id="featured-coupons" class="featured-coupons py-5">
-    <div class="container">
-        <div class="section-header text-center mb-5">
-            <h2 class="section-title display-6 fw-bold mb-3">
-                <i class="fas fa-star text-warning me-2"></i>
-                Featured Coupons
-            </h2>
-            <p class="section-subtitle text-muted lead">
-                Hand-picked deals and discounts you don't want to miss
-            </p>
+<div class="container">
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="filters-sidebar">
+                <h5 class="filter-title mb-4">
+                    <i class="fas fa-filter me-2"></i>Filter Coupons
+                </h5>
+                
+                <!-- Store Filter -->
+                <div class="filter-section">
+                    <h6 class="filter-title">Popular Stores</h6>
+                    @foreach($stores->take(8) as $store)
+                    <div class="filter-option">
+                        <label class="form-check-label">
+                            <input type="checkbox" class="form-check-input me-2" name="stores[]" value="{{ $store->slug }}">
+                            {{ $store->name }}
+                        </label>
+                        <span class="filter-count">{{ $store->coupons_count ?? 0 }}</span>
+                    </div>
+                    @endforeach
+                    <a href="#" class="text-primary small text-decoration-none">View All Stores</a>
+                </div>
+                
+                <!-- Category Filter -->
+                <div class="filter-section">
+                    <h6 class="filter-title">Categories</h6>
+                    @foreach($categories->take(6) as $category)
+                    <div class="filter-option">
+                        <label class="form-check-label">
+                            <input type="checkbox" class="form-check-input me-2" name="categories[]" value="{{ $category->slug }}">
+                            {{ $category->name }}
+                        </label>
+                        <span class="filter-count">{{ $category->coupons_count ?? 0 }}</span>
+                    </div>
+                    @endforeach
+                </div>
+                
+                <!-- Coupon Type Filter -->
+                <div class="filter-section">
+                    <h6 class="filter-title">Coupon Type</h6>
+                    <div class="filter-option">
+                        <label class="form-check-label">
+                            <input type="radio" class="form-check-input me-2" name="type" value="code">
+                            Coupon Code
+                        </label>
+                        <span class="filter-count">{{ $coupons->where('type', 'code')->count() }}</span>
+                    </div>
+                    <div class="filter-option">
+                        <label class="form-check-label">
+                            <input type="radio" class="form-check-input me-2" name="type" value="deal">
+                            Deal/Offer
+                        </label>
+                        <span class="filter-count">{{ $coupons->where('type', 'deal')->count() }}</span>
+                    </div>
+                </div>
+                
+                <!-- Discount Range -->
+                <div class="filter-section">
+                    <h6 class="filter-title">Discount Range</h6>
+                    <div class="filter-option">
+                        <label class="form-check-label">
+                            <input type="checkbox" class="form-check-input me-2" name="discount[]" value="0-25">
+                            Up to 25% OFF
+                        </label>
+                    </div>
+                    <div class="filter-option">
+                        <label class="form-check-label">
+                            <input type="checkbox" class="form-check-input me-2" name="discount[]" value="25-50">
+                            25% - 50% OFF
+                        </label>
+                    </div>
+                    <div class="filter-option">
+                        <label class="form-check-label">
+                            <input type="checkbox" class="form-check-input me-2" name="discount[]" value="50+">
+                            50%+ OFF
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Clear Filters -->
+                <button class="btn btn-outline-secondary w-100 mt-3" id="clearFilters">
+                    <i class="fas fa-times me-2"></i>Clear All Filters
+                </button>
+            </div>
         </div>
         
-        <div class="row">
-            @forelse($featuredCoupons as $coupon)
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="coupon-card featured h-100">
-                    <div class="coupon-card-header">
-                        <div class="store-logo">
-                            @if($coupon->store && $coupon->store->logo_url)
-                                <img src="{{ $coupon->store->logo_url }}" 
-                                     alt="{{ $coupon->store->name }}" 
-                                     class="store-logo-img">
-                            @else
-                                <div class="store-logo-placeholder">
-                                    <i class="fas fa-store"></i>
-                                </div>
-                            @endif
-                        </div>
-                        <div class="featured-badge">
-                            <i class="fas fa-star"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="coupon-card-body">
-                        <h3 class="coupon-title">
-                            <a href="{{ route('coupons.show', $coupon->slug) }}" class="text-decoration-none">
-                                {{ $coupon->title }}
-                            </a>
-                        </h3>
-                        
-                        <p class="store-name">{{ $coupon->store->name ?? 'Unknown Store' }}</p>
-                        
-                        <div class="coupon-meta">
-                            @if($coupon->discount_percentage)
-                                <span class="discount-badge large">
-                                    {{ $coupon->discount_percentage }}% OFF
-                                </span>
-                            @endif
-                            @if($coupon->discount_amount)
-                                <span class="discount-badge large">
-                                    ₹{{ $coupon->discount_amount }} OFF
-                                </span>
-                            @endif
-                        </div>
-                        
-                        <div class="coupon-stats">
-                            <div class="stat-item">
-                                <i class="fas fa-users text-muted"></i>
-                                <span>{{ $coupon->used_count ?? 0 }} used</span>
-                            </div>
-                            @if($coupon->end_date)
-                            <div class="stat-item">
-                                <i class="fas fa-clock text-warning"></i>
-                                <span>{{ $coupon->remaining_days }} days left</span>
-                            </div>
-                            @endif
-                        </div>
-                    </div>
-                    
-                    <div class="coupon-card-footer">
-                        <button class="btn btn-primary btn-reveal-coupon w-100" 
-                                onclick="showCouponPopup({{ $coupon->id }})">
-                            <i class="fas fa-eye me-2"></i>Reveal Code
-                        </button>
-                    </div>
+        <!-- Coupons Grid -->
+        <div class="col-lg-9">
+            <!-- Search and Sort -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="results-info">
+                    <h5 class="mb-0">Showing {{ $coupons->count() }} of {{ $coupons->total() }} coupons</h5>
+                    <small class="text-muted">Updated {{ now()->diffForHumans() }}</small>
                 </div>
-            </div>
-            @empty
-            <div class="col-12 text-center">
-                <div class="empty-state">
-                    <i class="fas fa-tags display-1 text-muted mb-3"></i>
-                    <h3>No Featured Coupons</h3>
-                    <p class="text-muted">Check back later for amazing deals!</p>
-                </div>
-            </div>
-            @endforelse
-        </div>
-    </div>
-</section>
-
-<!-- All Coupons Section -->
-<section class="all-coupons py-5 bg-light">
-    <div class="container">
-        <div class="row">
-            <!-- Sidebar Filters -->
-            <div class="col-lg-3 mb-4">
-                <div class="filters-sidebar">
-                    <div class="filter-card">
-                        <h5 class="filter-title">
-                            <i class="fas fa-filter me-2"></i>Filters
-                        </h5>
-                        
-                        <!-- Store Filter -->
-                        <div class="filter-group mb-3">
-                            <label class="form-label fw-bold">Store</label>
-                            <select name="store_id" class="form-select" onchange="this.form.submit()">
-                                <option value="">All Stores</option>
-                                @foreach($stores as $store)
-                                <option value="{{ $store->id }}" 
-                                        {{ request('store_id') == $store->id ? 'selected' : '' }}>
-                                    {{ $store->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <!-- Category Filter -->
-                        <div class="filter-group mb-3">
-                            <label class="form-label fw-bold">Category</label>
-                            <select name="category_id" class="form-select" onchange="this.form.submit()">
-                                <option value="">All Categories</option>
-                                @foreach($categories as $category)
-                                <option value="{{ $category->id }}" 
-                                        {{ request('category_id') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <!-- Discount Filter -->
-                        <div class="filter-group mb-3">
-                            <label class="form-label fw-bold">Minimum Discount</label>
-                            <select name="min_discount" class="form-select" onchange="this.form.submit()">
-                                <option value="">Any Discount</option>
-                                <option value="10" {{ request('min_discount') == '10' ? 'selected' : '' }}>10%+</option>
-                                <option value="20" {{ request('min_discount') == '20' ? 'selected' : '' }}>20%+</option>
-                                <option value="30" {{ request('min_discount') == '30' ? 'selected' : '' }}>30%+</option>
-                                <option value="50" {{ request('min_discount') == '50' ? 'selected' : '' }}>50%+</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Sort Options -->
-                        <div class="filter-group mb-3">
-                            <label class="form-label fw-bold">Sort By</label>
-                            <select name="sort" class="form-select" onchange="this.form.submit()">
-                                <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Newest First</option>
-                                <option value="popular" {{ request('sort') == 'popular' ? 'selected' : '' }}>Most Popular</option>
-                                <option value="discount" {{ request('sort') == 'discount' ? 'selected' : '' }}>Highest Discount</option>
-                                <option value="expiring" {{ request('sort') == 'expiring' ? 'selected' : '' }}>Expiring Soon</option>
-                            </select>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-search me-2"></i>Apply Filters
-                        </button>
-                    </div>
+                <div class="d-flex gap-3 align-items-center">
+                    <label class="form-label mb-0 fw-bold">Sort by:</label>
+                    <select class="form-select sort-dropdown" style="width: auto;">
+                        <option value="newest">Newest First</option>
+                        <option value="popular">Most Popular</option>
+                        <option value="expiry">Expiring Soon</option>
+                        <option value="discount">Highest Discount</option>
+                    </select>
                 </div>
             </div>
             
             <!-- Coupons Grid -->
-            <div class="col-lg-9">
-                <div class="coupons-header d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="mb-0">
-                        <i class="fas fa-tags me-2"></i>
-                        All Coupons 
-                        <span class="text-muted">({{ $coupons->total() }})</span>
-                    </h3>
-                    
-                    <div class="view-options">
-                        <button class="btn btn-outline-secondary btn-sm active" data-view="grid">
-                            <i class="fas fa-th"></i>
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" data-view="list">
-                            <i class="fas fa-list"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="coupons-grid" id="couponsGrid">
-                    @forelse($coupons as $coupon)
-                    <div class="coupon-card h-100" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
-                        <div class="coupon-card-header">
-                            <div class="store-logo">
-                                @if($coupon->store && $coupon->store->logo_url)
-                                    <img src="{{ $coupon->store->logo_url }}" 
-                                         alt="{{ $coupon->store->name }}" 
-                                         class="store-logo-img">
-                                @else
-                                    <div class="store-logo-placeholder">
-                                        <i class="fas fa-store"></i>
-                                    </div>
-                                @endif
-                            </div>
-                            
-                            @if($coupon->featured)
-                            <div class="featured-badge">
-                                <i class="fas fa-star"></i>
-                            </div>
-                            @endif
-                            
-                            @if($coupon->popular)
-                            <div class="popular-badge">
-                                <i class="fas fa-fire"></i>
-                            </div>
-                            @endif
-                        </div>
-                        
-                        <div class="coupon-card-body">
-                            <h3 class="coupon-title">
-                                <a href="{{ route('coupons.show', $coupon->slug) }}" class="text-decoration-none">
-                                    {{ $coupon->title }}
-                                </a>
-                            </h3>
-                            
-                            <p class="store-name">{{ $coupon->store->name ?? 'Unknown Store' }}</p>
-                            
-                            <div class="coupon-meta">
-                                @if($coupon->discount_percentage)
-                                    <span class="discount-badge">
-                                        {{ $coupon->discount_percentage }}% OFF
-                                    </span>
-                                @endif
-                                @if($coupon->discount_amount)
-                                    <span class="discount-badge">
-                                        ₹{{ $coupon->discount_amount }} OFF
-                                    </span>
-                                @endif
-                            </div>
-                            
-                            @if($coupon->short_description)
-                            <p class="coupon-description">{{ Str::limit($coupon->short_description, 80) }}</p>
-                            @endif
-                            
-                            <div class="coupon-stats">
-                                <div class="stat-item">
-                                    <i class="fas fa-users text-muted"></i>
-                                    <span>{{ $coupon->used_count ?? 0 }} used</span>
-                                </div>
-                                @if($coupon->end_date)
-                                <div class="stat-item">
-                                    <i class="fas fa-clock text-warning"></i>
-                                    <span>{{ $coupon->remaining_days }} days left</span>
-                                </div>
-                                @endif
-                            </div>
-                        </div>
-                        
-                        <div class="coupon-card-footer">
-                            <button class="btn btn-primary btn-reveal-coupon w-100" 
-                                    onclick="showCouponPopup({{ $coupon->id }})">
-                                <i class="fas fa-eye me-2"></i>Reveal Code
-                            </button>
-                        </div>
-                    </div>
-                    @empty
-                    <div class="col-12 text-center">
-                        <div class="empty-state">
-                            <i class="fas fa-search display-1 text-muted mb-3"></i>
-                            <h3>No Coupons Found</h3>
-                            <p class="text-muted">Try adjusting your search criteria or check back later.</p>
-                            <a href="{{ route('coupons.index') }}" class="btn btn-primary">
-                                <i class="fas fa-refresh me-2"></i>Reset Filters
-                            </a>
-                        </div>
-                    </div>
-                    @endforelse
-                </div>
-                
-                <!-- Pagination -->
-                @if($coupons->hasPages())
-                <div class="pagination-wrapper mt-5">
-                    {{ $coupons->appends(request()->query())->links() }}
-                </div>
-                @endif
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Stores Section -->
-<section id="stores" class="stores-section py-5">
-    <div class="container">
-        <div class="section-header text-center mb-5">
-            <h2 class="section-title display-6 fw-bold mb-3">
-                <i class="fas fa-store text-primary me-2"></i>
-                Popular Stores
-            </h2>
-            <p class="section-subtitle text-muted lead">
-                Discover amazing deals from your favorite online stores
-            </p>
-        </div>
-        
-        <div class="row">
-            @foreach($popularStores as $store)
-            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                <div class="store-card text-center h-100">
-                    <div class="store-logo-wrapper mb-3">
-                        @if($store->logo_url)
-                            <img src="{{ $store->logo_url }}" 
-                                 alt="{{ $store->name }}" 
-                                 class="store-logo">
-                        @else
-                            <div class="store-logo-placeholder">
-                                <i class="fas fa-store"></i>
-                            </div>
-                        @endif
-                    </div>
-                    
-                    <h4 class="store-name">{{ $store->name }}</h4>
-                    
-                    <div class="store-stats">
-                        <div class="stat">
-                            <span class="stat-number">{{ $store->coupons_count ?? 0 }}</span>
-                            <span class="stat-label">Coupons</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">{{ $store->deals_count ?? 0 }}</span>
-                            <span class="stat-label">Deals</span>
-                        </div>
-                    </div>
-                    
-                    <div class="store-rating mb-3">
-                        @for($i = 1; $i <= 5; $i++)
-                            @if($i <= ($store->rating ?? 0))
-                                <i class="fas fa-star text-warning"></i>
+            <div class="row coupon-grid">
+                @forelse($coupons as $coupon)
+                <div class="col-md-6 mb-4" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
+                    <div class="coupon-card card h-100">
+                        <div class="coupon-badge">
+                            @if($coupon->discount_percentage)
+                                {{ $coupon->discount_percentage }}% OFF
+                            @elseif($coupon->discount_amount)
+                                ₹{{ $coupon->discount_amount }} OFF
                             @else
-                                <i class="far fa-star text-muted"></i>
+                                DEAL
                             @endif
-                        @endfor
-                        <span class="rating-text ms-2">{{ number_format($store->rating ?? 0, 1) }}</span>
+                        </div>
+                        
+                        <div class="card-body">
+                            <!-- Store Info -->
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="{{ $coupon->store->getFirstMediaUrl('logo') ?: 'https://via.placeholder.com/70x70?text=' . substr($coupon->store->name, 0, 1) }}" 
+                                     alt="{{ $coupon->store->name }}" class="store-logo me-3">
+                                <div class="flex-grow-1">
+                                    <h6 class="fw-bold mb-1">{{ $coupon->store->name }}</h6>
+                                    <small class="text-muted">{{ $coupon->category->name ?? 'General' }}</small>
+                                    @if($coupon->is_verified)
+                                        <div class="verified-badge mt-1">
+                                            <i class="fas fa-check-circle me-1"></i>Verified
+                                        </div>
+                                    @endif
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger favorite-btn" 
+                                        data-type="coupon" data-id="{{ $coupon->id }}"
+                                        title="Add to favorites">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Coupon Details -->
+                            <h6 class="card-title fw-bold mb-2">{{ $coupon->title }}</h6>
+                            <p class="card-text text-muted small mb-3">{{ Str::limit($coupon->description, 80) }}</p>
+                            
+                            <!-- Coupon Stats -->
+                            <div class="coupon-stats mb-3">
+                                <div class="stat-item">
+                                    <i class="fas fa-eye"></i>
+                                    <span>{{ number_format($coupon->views_count) }}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-mouse-pointer"></i>
+                                    <span>{{ number_format($coupon->clicks_count) }} used</span>
+                                </div>
+                                @if($coupon->expires_at)
+                                <div class="stat-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>{{ $coupon->expires_at->diffForHumans() }}</span>
+                                </div>
+                                @endif
+                            </div>
+                            
+                            <!-- Action Button -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                @if($coupon->type === 'code')
+                                <button class="coupon-btn flex-grow-1 me-2" 
+                                        onclick="showCouponPopup({{ $coupon->id }}, '{{ $coupon->title }}')">
+                                    <i class="fas fa-ticket-alt me-2"></i>Get Code
+                                </button>
+                                @else
+                                <a href="{{ $coupon->affiliate_url }}" target="_blank" 
+                                   class="coupon-btn flex-grow-1 me-2 text-center text-decoration-none"
+                                   onclick="trackAffiliateClick('{{ $coupon->affiliate_url }}')">
+                                    <i class="fas fa-external-link-alt me-2"></i>Get Deal
+                                </a>
+                                @endif
+                                <button class="btn btn-outline-primary btn-sm" title="Share coupon">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <a href="{{ route('stores.show', $store->slug) }}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-eye me-2"></i>View Store
+                </div>
+                @empty
+                <div class="col-12 text-center py-5">
+                    <img src="https://via.placeholder.com/200x150?text=No+Coupons" alt="No coupons" class="mb-3 opacity-50">
+                    <h4 class="text-muted">No coupons found</h4>
+                    <p class="text-muted">Try adjusting your filters or search criteria</p>
+                    <a href="{{ route('coupons.index') }}" class="btn btn-primary">
+                        <i class="fas fa-refresh me-2"></i>Reset Filters
                     </a>
                 </div>
+                @endforelse
             </div>
-            @endforeach
-        </div>
-        
-        <div class="text-center mt-4">
-            <a href="{{ route('stores.index') }}" class="btn btn-primary btn-lg">
-                <i class="fas fa-store me-2"></i>View All Stores
-            </a>
+            
+            <!-- Pagination -->
+            @if($coupons->hasPages())
+            <div class="d-flex justify-content-center">
+                {{ $coupons->links() }}
+            </div>
+            @endif
         </div>
     </div>
-</section>
+</div>
 
 <!-- Newsletter Section -->
-<section class="newsletter-section py-5 bg-primary text-white">
-    <div class="container">
+<section class="py-5 bg-primary text-white mt-5">
+    <div class="container text-center">
         <div class="row justify-content-center">
-            <div class="col-lg-8 text-center">
-                <h3 class="mb-3">
-                    <i class="fas fa-envelope me-2"></i>
-                    Never Miss a Deal!
-                </h3>
-                <p class="lead mb-4">
-                    Subscribe to our newsletter and get the latest coupons and deals delivered to your inbox.
-                </p>
-                
-                <form class="newsletter-form" action="{{ route('newsletter.subscribe') }}" method="POST">
-                    @csrf
+            <div class="col-lg-6">
+                <h3 class="fw-bold mb-3">Never Miss a Deal!</h3>
+                <p class="mb-4">Get the latest coupons and exclusive offers delivered to your inbox</p>
+                <form class="newsletter-form">
                     <div class="input-group input-group-lg">
-                        <input type="email" 
-                               name="email" 
-                               class="form-control" 
-                               placeholder="Enter your email address"
-                               required>
+                        <input type="email" class="form-control" placeholder="Enter your email">
                         <button class="btn btn-warning" type="submit">
-                            <i class="fas fa-paper-plane me-2"></i>Subscribe
+                            <i class="fas fa-bell me-2"></i>Subscribe
                         </button>
                     </div>
                 </form>
-                
-                <p class="small mt-3 opacity-75">
-                    We respect your privacy. Unsubscribe at any time.
-                </p>
             </div>
         </div>
     </div>
 </section>
-
-<!-- Include Coupon Popup Component -->
-@foreach($coupons as $coupon)
-    <x-coupon-popup 
-        :coupon="$coupon" 
-        :show="false"
-        :position="$coupon->popup_position ?? 'center'"
-        :animation="$coupon->popup_animation ?? 'fadeIn'"
-        :delay="$coupon->popup_delay ?? 0"
-        :style="$coupon->popup_style ?? 'default'" />
-@endforeach
-
 @endsection
 
-@push('styles')
-<link rel="stylesheet" href="{{ asset('css/coupon-popup.css') }}">
-<style>
-/* Hero Section */
-.hero-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.hero-title {
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.hero-image {
-    animation: float 6s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-}
-
-/* Coupon Cards */
-.coupon-card {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid #f0f0f0;
-    overflow: hidden;
-}
-
-.coupon-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-}
-
-.coupon-card.featured {
-    border: 2px solid #ffc107;
-    box-shadow: 0 8px 30px rgba(255, 193, 7, 0.2);
-}
-
-.coupon-card-header {
-    padding: 20px 20px 0;
-    position: relative;
-}
-
-.store-logo {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 2px solid #f0f0f0;
-}
-
-.store-logo-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.store-logo-placeholder {
-    width: 100%;
-    height: 100%;
-    background: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-    font-size: 24px;
-}
-
-.featured-badge,
-.popular-badge {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 14px;
-}
-
-.featured-badge {
-    background: linear-gradient(135deg, #ffc107, #ff8f00);
-}
-
-.popular-badge {
-    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-}
-
-.coupon-card-body {
-    padding: 20px;
-}
-
-.coupon-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    line-height: 1.4;
-}
-
-.coupon-title a {
-    color: #212529;
-}
-
-.coupon-title a:hover {
-    color: #007bff;
-}
-
-.store-name {
-    color: #6c757d;
-    font-size: 14px;
-    margin-bottom: 12px;
-    font-weight: 500;
-}
-
-.coupon-meta {
-    margin-bottom: 16px;
-}
-
-.discount-badge {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: inline-block;
-    margin-right: 8px;
-    margin-bottom: 8px;
-}
-
-.discount-badge.large {
-    font-size: 14px;
-    padding: 8px 16px;
-}
-
-.coupon-description {
-    color: #6c757d;
-    font-size: 14px;
-    line-height: 1.5;
-    margin-bottom: 16px;
-}
-
-.coupon-stats {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.stat-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: #6c757d;
-}
-
-.coupon-card-footer {
-    padding: 0 20px 20px;
-}
-
-.btn-reveal-coupon {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    border: none;
-    padding: 12px 24px;
-    font-weight: 600;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.btn-reveal-coupon:hover {
-    background: linear-gradient(135deg, #0056b3, #004085);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
-}
-
-/* Store Cards */
-.store-card {
-    background: white;
-    border-radius: 16px;
-    padding: 24px 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    transition: all 0.3s ease;
-    border: 1px solid #f0f0f0;
-}
-
-.store-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-}
-
-.store-logo-wrapper {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto;
-}
-
-.store-logo {
-    width: 100%;
-    height: 100%;
-    border-radius: 16px;
-    object-fit: cover;
-    border: 2px solid #f0f0f0;
-}
-
-.store-logo-placeholder {
-    width: 100%;
-    height: 100%;
-    background: #f8f9fa;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-    font-size: 32px;
-    border: 2px solid #f0f0f0;
-}
-
-.store-name {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    color: #212529;
-}
-
-.store-stats {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    margin-bottom: 16px;
-}
-
-.stat {
-    text-align: center;
-}
-
-.stat-number {
-    display: block;
-    font-size: 20px;
-    font-weight: 700;
-    color: #007bff;
-}
-
-.stat-label {
-    font-size: 12px;
-    color: #6c757d;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.store-rating {
-    margin-bottom: 16px;
-}
-
-.rating-text {
-    font-size: 14px;
-    color: #6c757d;
-    font-weight: 600;
-}
-
-/* Filters Sidebar */
-.filters-sidebar {
-    position: sticky;
-    top: 20px;
-}
-
-.filter-card {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    border: 1px solid #f0f0f0;
-}
-
-.filter-title {
-    color: #212529;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #f0f0f0;
-}
-
-.filter-group {
-    margin-bottom: 20px;
-}
-
-.form-label {
-    color: #495057;
-    margin-bottom: 8px;
-}
-
-.form-select {
-    border-radius: 8px;
-    border: 2px solid #e9ecef;
-    transition: all 0.3s ease;
-}
-
-.form-select:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-/* Quick Filters */
-.quick-filters {
-    margin-top: 16px;
-}
-
-.quick-filters .btn {
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.quick-filters .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-}
-
-.quick-filters .btn.active {
-    background: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-/* Empty State */
-.empty-state {
-    padding: 60px 20px;
-    color: #6c757d;
-}
-
-.empty-state i {
-    opacity: 0.5;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .hero-title {
-        font-size: 2.5rem;
-    }
-    
-    .coupon-card {
-        margin-bottom: 20px;
-    }
-    
-    .filters-sidebar {
-        position: static;
-        margin-bottom: 30px;
-    }
-    
-    .quick-filters {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .quick-filters .btn {
-        width: 100%;
-        max-width: 200px;
-    }
-}
-
-/* Animation Classes */
-[data-aos] {
-    opacity: 0;
-    transition-property: opacity, transform;
-}
-
-[data-aos].aos-animate {
-    opacity: 1;
-}
-
-[data-aos="fade-up"] {
-    transform: translate3d(0, 30px, 0);
-}
-
-[data-aos="fade-up"].aos-animate {
-    transform: translate3d(0, 0, 0);
-}
-</style>
-@endpush
-
 @push('scripts')
-<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/countup@1.8.2/dist/countUp.min.js"></script>
+
 <script>
+// Initialize counters
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize AOS animations
-    AOS.init({
-        duration: 800,
-        easing: 'ease-out-cubic',
-        once: true
-    });
+    const counters = document.querySelectorAll('[data-countup]');
     
-    // View toggle functionality
-    const viewButtons = document.querySelectorAll('.view-options .btn');
-    const couponsGrid = document.getElementById('couponsGrid');
-    
-    viewButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const view = this.dataset.view;
-            
-            // Update active button
-            viewButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Update grid layout
-            if (view === 'list') {
-                couponsGrid.classList.add('list-view');
-            } else {
-                couponsGrid.classList.remove('list-view');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const target = entry.target;
+                const endVal = parseInt(target.getAttribute('data-countup'));
+                const countUp = new CountUp(target, 0, endVal, 0, 2);
+                countUp.start();
+                observer.unobserve(target);
             }
         });
     });
     
-    // Auto-submit form on filter change
-    const filterSelects = document.querySelectorAll('.filters-sidebar select');
-    filterSelects.forEach(select => {
-        select.addEventListener('change', function() {
-            this.closest('form').submit();
-        });
-    });
+    counters.forEach(counter => observer.observe(counter));
 });
 
-// Function to show coupon popup
-function showCouponPopup(couponId) {
-    const popup = document.getElementById(`coupon-popup-${couponId}`);
-    if (popup) {
-        popup.style.display = 'block';
-        setTimeout(() => {
-            popup.classList.add('show');
-        }, 10);
-        
-        // Track popup view
-        trackCouponPopupView(couponId);
-    }
-}
-
-// Function to track coupon popup view
-function trackCouponPopupView(couponId) {
-    fetch('/api/coupons/' + couponId + '/track-popup', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        }
-    }).catch(error => {
-        console.error('Error tracking popup view:', error);
+// Filter functionality
+document.getElementById('clearFilters').addEventListener('click', function() {
+    // Clear all checkboxes and radio buttons
+    document.querySelectorAll('.filters-sidebar input[type="checkbox"], .filters-sidebar input[type="radio"]').forEach(input => {
+        input.checked = false;
     });
+    
+    // Reload page without filters
+    window.location.href = window.location.pathname;
+});
+
+// Sort functionality
+document.querySelector('.sort-dropdown').addEventListener('change', function() {
+    const url = new URL(window.location);
+    url.searchParams.set('sort', this.value);
+    window.location.href = url.toString();
+});
+
+// Enhanced coupon popup with better styling
+function showCouponPopup(couponId, couponTitle) {
+    // This will be handled by the global public.js file
+    if (typeof window.showCouponPopup === 'function') {
+        window.showCouponPopup(couponId, couponTitle);
+    } else {
+        // Fallback implementation
+        Swal.fire({
+            title: 'Coupon Code',
+            html: `
+                <div class="text-center">
+                    <div class="coupon-code-display p-4 bg-primary text-white rounded-3 mb-3" style="cursor: pointer; font-size: 1.5rem; font-weight: bold;">
+                        SAVE${couponId}0
+                    </div>
+                    <p>Click the code above to copy it!</p>
+                    <div class="share-buttons mt-3">
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="shareOnFacebook()">
+                            <i class="fab fa-facebook-f"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-info me-2" onclick="shareOnTwitter()">
+                            <i class="fab fa-twitter"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="shareOnWhatsApp()">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Go to Store',
+            cancelButtonText: 'Close',
+            confirmButtonColor: '#007bff'
+        });
+    }
 }
 </script>
 @endpush

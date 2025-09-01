@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
+            \App\Http\Middleware\LogUserActivityMiddleware::class,
         ]);
 
         $middleware->alias([
@@ -27,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'signed' => \App\Http\Middleware\ValidateSignature::class,
             'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'track.affiliate' => \App\Http\Middleware\TrackAffiliateMiddleware::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
