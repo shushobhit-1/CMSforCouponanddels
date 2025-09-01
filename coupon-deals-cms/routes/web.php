@@ -11,6 +11,8 @@ use App\Http\Controllers\StorePublicController;
 use App\Http\Controllers\CategoryPublicController;
 use App\Http\Controllers\ApiController;
 use App\Http\Controllers\Admin\SliderController as AdminSliderController;
+use App\Http\Controllers\Admin\ThemeController as AdminThemeController;
+use App\Http\Controllers\Admin\AppearanceController as AdminAppearanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +65,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])
     ->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::resource('sliders', AdminSliderController::class);
+        Route::get('appearance/theme', [AdminThemeController::class, 'edit'])->name('appearance.theme.edit');
+        Route::put('appearance/theme', [AdminThemeController::class, 'update'])->name('appearance.theme.update');
+        Route::get('appearance/header', [AdminAppearanceController::class, 'header'])->name('appearance.header.edit');
+        Route::post('appearance/header', [AdminAppearanceController::class, 'saveHeader'])->name('appearance.header.save');
+        Route::get('appearance/footer', [AdminAppearanceController::class, 'footer'])->name('appearance.footer.edit');
+        Route::post('appearance/footer', [AdminAppearanceController::class, 'saveFooter'])->name('appearance.footer.save');
+        Route::get('appearance/menus', [AdminAppearanceController::class, 'menus'])->name('appearance.menus.edit');
+        Route::post('appearance/menus', [AdminAppearanceController::class, 'saveMenus'])->name('appearance.menus.save');
     });
 
 require __DIR__.'/auth.php';

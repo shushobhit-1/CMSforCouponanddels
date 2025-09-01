@@ -43,16 +43,22 @@
     
     <!-- Custom Styles -->
     <style>
+        @php
+            $theme = optional(\App\Models\Setting::where('key','theme')->first())->value ?? [];
+            $menu = optional(\App\Models\Menu::where('location','primary')->first());
+            $headerHtml = optional(\App\Models\Setting::where('key','header_html')->first())->value['html'] ?? '';
+            $footerHtml = optional(\App\Models\Setting::where('key','footer_html')->first())->value['html'] ?? '';
+        @endphp
         :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
+            --primary-color: {{ $theme['primary_color'] ?? '#007bff' }};
+            --secondary-color: {{ $theme['secondary_color'] ?? '#6c757d' }};
             --success-color: #28a745;
             --danger-color: #dc3545;
             --warning-color: #ffc107;
             --info-color: #17a2b8;
             --light-color: #f8f9fa;
             --dark-color: #343a40;
-            --font-family: 'Inter', sans-serif;
+            --font-family: {{ isset($theme['font_family']) ? $theme['font_family'] : '"Inter", sans-serif' }};
         }
         
         body {
@@ -206,6 +212,7 @@
     @stack('styles')
 </head>
 <body>
+    {!! $headerHtml !!}
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
         <div class="container">
@@ -218,61 +225,20 @@
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
-                <!-- Mega Menu -->
+                <!-- Primary Menu -->
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item dropdown mega-menu">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-th-large me-1"></i>Categories
-                        </a>
-                        <div class="dropdown-menu p-4">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <h6 class="dropdown-header">Electronics</h6>
-                                    <a class="dropdown-item" href="#">Smartphones</a>
-                                    <a class="dropdown-item" href="#">Laptops</a>
-                                    <a class="dropdown-item" href="#">Tablets</a>
-                                </div>
-                                <div class="col-md-3">
-                                    <h6 class="dropdown-header">Fashion</h6>
-                                    <a class="dropdown-item" href="#">Men's Clothing</a>
-                                    <a class="dropdown-item" href="#">Women's Clothing</a>
-                                    <a class="dropdown-item" href="#">Shoes</a>
-                                </div>
-                                <div class="col-md-3">
-                                    <h6 class="dropdown-header">Home & Kitchen</h6>
-                                    <a class="dropdown-item" href="#">Appliances</a>
-                                    <a class="dropdown-item" href="#">Furniture</a>
-                                    <a class="dropdown-item" href="#">Decor</a>
-                                </div>
-                                <div class="col-md-3">
-                                    <h6 class="dropdown-header">Travel</h6>
-                                    <a class="dropdown-item" href="#">Hotels</a>
-                                    <a class="dropdown-item" href="#">Flights</a>
-                                    <a class="dropdown-item" href="#">Car Rentals</a>
-                                </div>
-                            </div>
-                        </div>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('coupons.index') }}">
-                            <i class="fas fa-ticket-alt me-1"></i>Coupons
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <i class="fas fa-fire me-1"></i>Deals
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <i class="fas fa-box me-1"></i>Products
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <i class="fas fa-store me-1"></i>Stores
-                        </a>
-                    </li>
+                    @if($menu && is_array($menu->items))
+                        @foreach($menu->items as $item)
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ $item['url'] ?? '#' }}" target="{{ $item['target'] ?? '_self' }}">{{ $item['label'] ?? 'Menu' }}</a>
+                            </li>
+                        @endforeach
+                    @else
+                        <li class="nav-item"><a class="nav-link" href="{{ route('coupons.index') }}">Coupons</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('deals.index') }}">Deals</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('products.index') }}">Products</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('stores.index') }}">Stores</a></li>
+                    @endif
                 </ul>
                 
                 <!-- Search -->
@@ -326,6 +292,7 @@
     <!-- Footer -->
     <footer class="bg-dark text-white py-5 mt-5">
         <div class="container">
+            {!! $footerHtml !!}
             <div class="row">
                 <div class="col-md-3">
                     <h5 class="mb-3">{{ config('app.name') }}</h5>
